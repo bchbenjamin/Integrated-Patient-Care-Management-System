@@ -1,0 +1,5 @@
+.venv
+*.pyc
+Reference files
+__pycache__
+.env
