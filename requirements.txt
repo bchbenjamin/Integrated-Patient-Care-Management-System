@@ -1,0 +1,9 @@
+streamlit>=1.30.0
+python-dotenv>=1.0.0
+langchain-groq>=0.1.0
+langchain-core>=0.2.0
+pymysql>=1.1.0
+bcrypt>=4.0.0
+plotly>=5.18.0
+streamlit-calendar>=1.0.0
+pandas>=2.0.0
