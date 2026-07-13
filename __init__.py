@@ -4,18 +4,39 @@ Created by:
 - Benjamin B C H
 """
 
-packages = [
-    "streamlit",
-    "dotenv",
-    "langchain_groq",
-    "langchain_core"
-]
-import sys, subprocess
+import sys
+import subprocess
+import importlib
 
-def install(packages):
-    subprocess.check_call([sys.executable, "-m", "pip", "install"] + packages)
+# Map python module import name -> pip package installation name
+packages_map = {
+    "streamlit": "streamlit",
+    "dotenv": "python-dotenv",
+    "langchain_groq": "langchain-groq",
+    "langchain_core": "langchain-core",
+    "pymysql": "pymysql",
+    "bcrypt": "bcrypt",
+    "plotly": "plotly",
+    "streamlit_calendar": "streamlit-calendar",
+    "pandas": "pandas"
+}
 
+def install_missing():
+    missing = []
+    for module_name, package_name in packages_map.items():
+        try:
+            importlib.import_module(module_name)
+        except ImportError:
+            missing.append(package_name)
+    if missing:
+        print(f"Installing missing packages: {missing}")
+        try:
+            subprocess.check_call([sys.executable, "-m", "pip", "install"] + missing)
+        except Exception as e:
+            print(f"Error installing packages: {e}")
+
+# Run automatic check and install when package is imported or run directly
+install_missing()
 
 if __name__ == "__main__":
-    install(packages)
-    
+    print("All packages verified and installed successfully.")

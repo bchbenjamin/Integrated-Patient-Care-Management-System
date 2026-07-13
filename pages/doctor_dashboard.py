@@ -27,7 +27,7 @@ def render(user):
 
     # Availability toggle
     avail_options = ['available', 'busy', 'off_duty']
-    avail_labels = {'available': '🟢 Available', 'busy': '🟡 Busy', 'off_duty': '🔴 Off Duty'}
+    avail_labels = {'available': 'Available', 'busy': 'Busy', 'off_duty': 'Off Duty'}
     current_avail = doctor['availability']
 
     col_a, col_b = st.columns([3, 1])
@@ -78,9 +78,9 @@ def _render_schedule(doctor):
     if today_appts:
         for appt in today_appts:
             time_str = str(appt['appointment_time'])[:5] if appt['appointment_time'] else ''
-            status_emoji = {'scheduled': '🔵', 'completed': '✅', 'cancelled': '❌'}.get(appt['status'], '')
+            status_txt = {'scheduled': '[SCHEDULED]', 'completed': '[COMPLETED]', 'cancelled': '[CANCELLED]'}.get(appt['status'], '')
 
-            with st.expander(f"{status_emoji} {time_str} — {appt['patient_name']} ({appt['status']})"):
+            with st.expander(f"{status_txt} {time_str} — {appt['patient_name']}"):
                 st.write(f"**Reason:** {appt['reason'] or 'N/A'}")
                 st.write(f"**Health Condition:** {appt['health_condition'] or 'N/A'}")
                 st.write(f"**Blood Group:** {appt['blood_group'] or 'N/A'}")

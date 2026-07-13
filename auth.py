@@ -5,7 +5,13 @@ Passwords must contain: uppercase, special character, number, min 8 chars.
 """
 
 import re
-import bcrypt
+try:
+    import bcrypt
+except ModuleNotFoundError:
+    import sys, subprocess
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "bcrypt"])
+finally:
+    import bcrypt
 from db import fetch_one, execute_query
 
 

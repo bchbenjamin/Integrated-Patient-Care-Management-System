@@ -26,11 +26,18 @@ def get_connection():
 
 
 def create_tables(cursor):
-    """Create all required tables."""
+    """Create all required tables. Drops them first for clean updates."""
+    print("Dropping existing tables to prevent conflicts...")
+    cursor.execute("DROP TABLE IF EXISTS appointments")
+    cursor.execute("DROP TABLE IF EXISTS patients")
+    cursor.execute("DROP TABLE IF EXISTS doctors")
+    cursor.execute("DROP TABLE IF EXISTS specialties")
+    cursor.execute("DROP TABLE IF EXISTS users")
+
     print("Creating tables...")
 
     cursor.execute("""
-    CREATE TABLE IF NOT EXISTS users (
+    CREATE TABLE users (
         id INT AUTO_INCREMENT PRIMARY KEY,
         email VARCHAR(255) UNIQUE NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
@@ -42,22 +49,22 @@ def create_tables(cursor):
     """)
 
     cursor.execute("""
-    CREATE TABLE IF NOT EXISTS specialties (
+    CREATE TABLE specialties (
         id INT AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(100) NOT NULL,
         description TEXT,
-        icon VARCHAR(10)
+        icon TEXT
     )
     """)
 
     cursor.execute("""
-    CREATE TABLE IF NOT EXISTS doctors (
+    CREATE TABLE doctors (
         id INT AUTO_INCREMENT PRIMARY KEY,
         user_id INT UNIQUE NOT NULL,
         specialty_id INT,
         qualification VARCHAR(255),
         experience_years INT,
-        availability ENUM('available', 'busy', 'off_duty') DEFAULT 'available',
+        availability VARCHAR(100) DEFAULT 'Mon-Fri, 9AM to 5PM',
         bio TEXT,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
         FOREIGN KEY (specialty_id) REFERENCES specialties(id)
@@ -65,7 +72,7 @@ def create_tables(cursor):
     """)
 
     cursor.execute("""
-    CREATE TABLE IF NOT EXISTS patients (
+    CREATE TABLE patients (
         id INT AUTO_INCREMENT PRIMARY KEY,
         user_id INT UNIQUE NOT NULL,
         date_of_birth DATE,
@@ -78,7 +85,7 @@ def create_tables(cursor):
     """)
 
     cursor.execute("""
-    CREATE TABLE IF NOT EXISTS appointments (
+    CREATE TABLE appointments (
         id INT AUTO_INCREMENT PRIMARY KEY,
         patient_id INT NOT NULL,
         doctor_id INT NOT NULL,
@@ -93,7 +100,7 @@ def create_tables(cursor):
     )
     """)
 
-    print("✅ All tables created successfully.")
+    print("All tables created successfully.")
 
 
 def seed_data(cursor):
@@ -103,22 +110,17 @@ def seed_data(cursor):
     def hp(password):
         return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
-    # Check if data already exists
-    cursor.execute("SELECT COUNT(*) as cnt FROM users")
-    if cursor.fetchone()['cnt'] > 0:
-        print("⚠️  Data already exists. Skipping seed. Drop tables first to re-seed.")
-        return
-
     print("Seeding data...")
 
     # --- Specialties ---
+    # Store inline SVG definitions instead of emojis
     specialties = [
-        ("Cardiology", "Heart and blood vessels", "❤️"),
-        ("Dermatology", "Skin, hair and nails", "🧴"),
-        ("General Medicine", "Broad adult care", "➕"),
-        ("Neurology", "Brain and nervous system", "🧠"),
-        ("Pediatrics", "Care for children", "👶"),
-        ("Pulmonology", "Lungs and breathing", "🫁"),
+        ("Cardiology", "Heart and blood vessels", "<svg viewBox='0 0 24 24' width='24' height='24' stroke='#0f3e17' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'><path d='M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z'></path></svg>"),
+        ("Dermatology", "Skin, hair and nails", "<svg viewBox='0 0 24 24' width='24' height='24' stroke='#0f3e17' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'><path d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'></path></svg>"),
+        ("General Medicine", "Broad adult care", "<svg viewBox='0 0 24 24' width='24' height='24' stroke='#0f3e17' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='3' width='18' height='18' rx='2' ry='2'></rect><line x1='12' y1='8' x2='12' y2='16'></line><line x1='8' y1='12' x2='16' y2='12'></line></svg>"),
+        ("Neurology", "Brain and nervous system", "<svg viewBox='0 0 24 24' width='24' height='24' stroke='#0f3e17' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'><polyline points='22 12 18 12 15 21 9 3 6 12 2 12'></polyline></svg>"),
+        ("Pediatrics", "Care for children", "<svg viewBox='0 0 24 24' width='24' height='24' stroke='#0f3e17' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'></circle><path d='M8 14s1.5 2 4 2 4-2 4-2'></path><line x1='9' y1='9' x2='9.01' y2='9'></line><line x1='15' y1='9' x2='15.01' y2='9'></line></svg>"),
+        ("Pulmonology", "Lungs and breathing", "<svg viewBox='0 0 24 24' width='24' height='24' stroke='#0f3e17' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'><path d='M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2'></path></svg>"),
     ]
     for name, desc, icon in specialties:
         cursor.execute(

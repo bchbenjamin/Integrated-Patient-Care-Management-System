@@ -167,9 +167,9 @@ def _render_availability():
         with col1:
             st.write(f"**{doc['full_name']}** — {doc['specialty'] or 'General'}")
         with col2:
-            new_status = st.selectbox(
-                "Status", ['available', 'busy', 'off_duty'],
-                index=['available', 'busy', 'off_duty'].index(doc['availability']),
+            new_status = st.text_input(
+                "Status / Timings",
+                value=doc['availability'] if doc['availability'] else "",
                 key=f"avail_{doc['id']}"
             )
         with col3:
@@ -186,18 +186,20 @@ def _render_specialties():
 
     specialties = fetch_all("SELECT * FROM specialties ORDER BY name")
     for spec in specialties:
-        st.markdown(f"**{spec['icon']} {spec['name']}** — {spec['description']}")
+        st.markdown(
+            f"<div style='display:flex; align-items:center; gap:11px; margin-bottom:7px;'><span style='width:24px; height:24px; display:inline-block;'>{spec['icon']}</span> <strong style='font-size:16px;'>{spec['name']}</strong> — {spec['description']}</div>",
+            unsafe_allow_html=True
+        )
 
     st.markdown("<br>", unsafe_allow_html=True)
     with st.expander("Add New Specialty"):
         with st.form("add_spec_form"):
-            col1, col2, col3 = st.columns([2, 3, 1])
+            col1, col2 = st.columns([2, 3])
             with col1:
                 name = st.text_input("Name")
             with col2:
                 desc = st.text_input("Description")
-            with col3:
-                icon = st.text_input("Icon (emoji)", max_chars=4)
+            icon = st.text_area("Icon (SVG XML Code)")
             if st.form_submit_button("Add"):
                 if name:
                     execute_query("INSERT INTO specialties (name, description, icon) VALUES (%s, %s, %s)", (name, desc, icon))

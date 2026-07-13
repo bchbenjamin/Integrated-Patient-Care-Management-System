@@ -1,18 +1,20 @@
 """
 main.py — IPCMS Entry Point
-Handles routing, sidebar navigation, login/register, and global CSS.
+Handles routing, top navigation header, login/register, and global CSS.
 """
 
+import __init__
 import streamlit as st
 import base64
 import os
+import datetime
 from auth import login_user, register_patient, validate_password
 from pages import admin_dashboard, doctor_dashboard, patient_dashboard, calendar_view
 
 # --- Layout Configuration ---
 st.set_page_config(
     page_title="Ease Health — Integrated Patient Care",
-    page_icon="🌿",
+    page_icon="assets/ease_logo.png",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -59,6 +61,11 @@ header[data-testid="stHeader"] {
     display: none !important;
 }
 
+/* Hide Streamlit sidebar collapse control if any */
+[data-testid="collapsedControl"] {
+    display: none !important;
+}
+
 /* Typography */
 h1, h2, h3 {
     font-family: 'Cormorant Garamond', serif !important;
@@ -86,43 +93,6 @@ h2 {
     margin-bottom: 7px;
 }
 
-/* Sidebar Styling */
-section[data-testid="stSidebar"] {
-    background-color: var(--color-forest-ink) !important;
-    padding-top: 0 !important;
-}
-section[data-testid="stSidebar"] * {
-    color: var(--color-cream-paper) !important;
-}
-section[data-testid="stSidebar"] .stButton > button {
-    background-color: rgba(255, 254, 252, 0.12) !important;
-    color: var(--color-cream-paper) !important;
-    border: 1px solid rgba(255, 254, 252, 0.2) !important;
-    border-radius: 14px !important;
-    width: 100% !important;
-    text-align: left !important;
-    padding: 12px 18px !important;
-    margin-bottom: 4px !important;
-    transition: background-color 0.2s ease !important;
-    box-shadow: none !important;
-}
-section[data-testid="stSidebar"] .stButton > button:hover {
-    background-color: rgba(255, 254, 252, 0.22) !important;
-}
-section[data-testid="stSidebar"] .stButton > button p {
-    color: var(--color-cream-paper) !important;
-    font-size: 14px !important;
-}
-section[data-testid="stSidebar"] h1, 
-section[data-testid="stSidebar"] h2, 
-section[data-testid="stSidebar"] h3 {
-    color: var(--color-cream-paper) !important;
-}
-section[data-testid="stSidebar"] .stSelectbox label,
-section[data-testid="stSidebar"] .stRadio label {
-    color: var(--color-cream-paper) !important;
-}
-
 /* Login form */
 div[data-testid="stForm"] {
     background-color: var(--color-keylime-wash);
@@ -134,25 +104,6 @@ div[data-testid="stForm"] {
     border: none !important;
 }
 
-/* Buttons */
-.stButton > button, .stFormSubmitButton > button {
-    background-color: var(--color-forest-ink) !important;
-    color: var(--color-cream-paper) !important;
-    border-radius: 14px !important;
-    border: none !important;
-    font-weight: 400 !important;
-    padding: 14px 21px !important;
-    transition: background-color 0.2s ease !important;
-    box-shadow: none !important;
-}
-.stButton > button:hover, .stFormSubmitButton > button:hover {
-    background-color: var(--color-forest-shadow) !important;
-    color: var(--color-cream-paper) !important;
-}
-.stButton > button p, .stFormSubmitButton > button p {
-    font-size: 14px !important;
-    color: var(--color-cream-paper) !important;
-}
 
 /* Inputs */
 .stTextInput > div > div > input, .stTextArea > div > div > textarea {
@@ -274,7 +225,13 @@ if not st.session_state['logged_in']:
                     r_gender = st.selectbox("Gender", ["Male", "Female", "Other"])
                     r_blood = st.selectbox("Blood Group", ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"])
 
-                r_dob = st.date_input("Date of Birth", min_value=None)
+                # Date of birth range updated from 1900 to today
+                r_dob = st.date_input(
+                    "Date of Birth",
+                    value=datetime.date(2000, 1, 1),
+                    min_value=datetime.date(1900, 1, 1),
+                    max_value=datetime.date.today()
+                )
                 r_emergency = st.text_input("Emergency Contact")
 
                 st.markdown("<br>", unsafe_allow_html=True)
@@ -291,81 +248,91 @@ if not st.session_state['logged_in']:
                         )
                         if success:
                             st.success(msg)
+                            # Automatically login the user after registration
+                            user = login_user(r_email, r_password)
+                            if user:
+                                st.session_state['logged_in'] = True
+                                st.session_state['user'] = user
+                                st.session_state['page'] = 'dashboard'
+                                st.rerun()
                         else:
                             st.error(msg)
 
 
 # ==========================================
-# LOGGED IN — SIDEBAR + ROUTING
+# LOGGED IN — SIDEBAR NAVIGATION + ROUTING
 # ==========================================
 else:
     user = st.session_state['user']
     role = user['role']
-
-    # --- Sidebar ---
+    page = st.session_state.get('page', 'dashboard')
+    
+    # --- Google Drive Style Sidebar ---
     with st.sidebar:
-        # Logo & Title
         if ease_logo_b64:
             st.markdown(f"""
-            <div style="display:flex; align-items:center; gap:14px; padding: 21px 0 14px 0;">
+            <div style="display:flex; align-items:center; gap:11px; padding: 7px 0; margin-bottom: 24px;">
                 <img src="data:image/png;base64,{ease_logo_b64}" width="40" style="border-radius:7px;"/>
                 <div>
-                    <div style="font-family:'Cormorant Garamond',serif; font-size:22px; font-weight:300; color:#fffefc;">IPCMS</div>
-                    <div style="font-size:10px; color:rgba(255,254,252,0.6);">Integrated Patient Care</div>
+                    <div style="font-family:'Cormorant Garamond',serif; font-size:24px; font-weight:600; color:var(--color-forest-ink); line-height:1;">Ease Health</div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
+        else:
+            st.markdown("<h2 style='color:var(--color-forest-ink); font-weight:600;'>Ease Health</h2>", unsafe_allow_html=True)
 
-        # Profile card
-        role_labels = {'admin': 'System Administrator', 'doctor': 'Physician', 'patient': 'Patient'}
-        st.markdown(f"""
-        <div style="background: rgba(255,254,252,0.08); border-radius:14px; padding:14px; margin: 14px 0;">
-            <div style="font-weight:600; font-size:14px; color:#fffefc;">{user['full_name']}</div>
-            <div style="font-size:11px; color:rgba(255,254,252,0.6);">{role_labels.get(role, role.title())}</div>
-        </div>
-        """, unsafe_allow_html=True)
+        role_label = {'admin': 'Admin', 'doctor': 'Physician', 'patient': 'Patient'}.get(role, role.title())
+        st.markdown(f"<p style='font-size: 13px; font-weight: 600; color: #71717a;'>Logged in as {user['full_name']} ({role_label})</p>", unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
+        
+        if st.button("Dashboard", use_container_width=True):
+            st.session_state['page'] = 'dashboard'
+            st.rerun()
+            
+        if st.button("Calendar", use_container_width=True):
+            st.session_state['page'] = 'calendar'
+            st.rerun()
 
-        # Navigation buttons
-        if role == 'admin':
-            if st.button("🏠 Admin Console", key="nav_dashboard"):
-                st.session_state['page'] = 'dashboard'
-                st.rerun()
-            if st.button("📅 Calendar", key="nav_calendar"):
-                st.session_state['page'] = 'calendar'
-                st.rerun()
+        if st.button("Settings", use_container_width=True):
+            st.session_state['page'] = 'settings'
+            st.rerun()
 
-        elif role == 'doctor':
-            if st.button("🩺 My Dashboard", key="nav_dashboard"):
-                st.session_state['page'] = 'dashboard'
-                st.rerun()
-            if st.button("📅 Calendar", key="nav_calendar"):
-                st.session_state['page'] = 'calendar'
-                st.rerun()
-
-        else:  # patient
-            if st.button("🏠 My Dashboard", key="nav_dashboard"):
-                st.session_state['page'] = 'dashboard'
-                st.rerun()
-            if st.button("📅 Calendar", key="nav_calendar"):
-                st.session_state['page'] = 'calendar'
-                st.rerun()
-
-        st.markdown("<br><br>", unsafe_allow_html=True)
-
-        # Sign Out (at the bottom)
-        if st.button("🚪 Sign Out", key="nav_signout"):
+        st.markdown("<br><br><br>", unsafe_allow_html=True)
+        
+        if st.button("Sign Out", use_container_width=True):
             st.session_state['logged_in'] = False
             st.session_state['user'] = None
             st.session_state['page'] = 'dashboard'
             st.rerun()
 
-    # --- Main Content Area ---
-    page = st.session_state.get('page', 'dashboard')
-
+    # --- Page Content Area ---
     if page == 'calendar':
         calendar_view.render(user)
+    elif page == 'settings':
+        st.markdown("<h2>Settings</h2>", unsafe_allow_html=True)
+        st.markdown("<h4>Change Password</h4>", unsafe_allow_html=True)
+        with st.form("change_password_form"):
+            old_pw = st.text_input("Current Password", type="password")
+            new_pw = st.text_input("New Password", type="password", help="Min 8 chars, 1 uppercase, 1 number, 1 special char")
+            if st.form_submit_button("Update Password"):
+                if not old_pw or not new_pw:
+                    st.error("Please fill in all fields.")
+                else:
+                    user_record = validate_password(user['email'], old_pw)
+                    if user_record:
+                        # Simple inline validation for new password
+                        import re
+                        if len(new_pw) < 8 or not re.search(r"[A-Z]", new_pw) or not re.search(r"\d", new_pw) or not re.search(r"[!@#$%^&*(),.?\":{}|<>]", new_pw):
+                            st.error("Password must be at least 8 chars long and contain an uppercase letter, a number, and a special character.")
+                        else:
+                            import bcrypt
+                            from db import execute_query
+                            new_hash = bcrypt.hashpw(new_pw.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+                            execute_query("UPDATE users SET password_hash = %s WHERE id = %s", (new_hash, user['id']))
+                            st.success("Password updated successfully!")
+                    else:
+                        st.error("Incorrect current password.")
     elif page == 'dashboard':
         if role == 'admin':
             admin_dashboard.render(user)

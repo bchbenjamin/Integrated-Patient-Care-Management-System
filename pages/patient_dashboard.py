@@ -74,8 +74,8 @@ def _render_booking(patient):
     st.markdown("<h2 style='margin-top:0;'>Schedule a Visit</h2>", unsafe_allow_html=True)
 
     # Step 1: Select specialty
-    specialties = fetch_all("SELECT id, name, icon FROM specialties ORDER BY name")
-    spec_options = {f"{s['icon']} {s['name']}": s['id'] for s in specialties}
+    specialties = fetch_all("SELECT id, name FROM specialties ORDER BY name")
+    spec_options = {s['name']: s['id'] for s in specialties}
     selected_spec = st.selectbox("Select Specialty", list(spec_options.keys()))
     spec_id = spec_options[selected_spec]
 
@@ -122,7 +122,7 @@ def _render_booking(patient):
                     "INSERT INTO appointments (patient_id, doctor_id, appointment_date, appointment_time, reason) VALUES (%s, %s, %s, %s, %s)",
                     (patient['id'], doc_id, appt_date.isoformat(), appt_time.strftime('%H:%M:%S'), reason)
                 )
-                st.success("Appointment booked successfully! 🌿")
+                st.success("Appointment booked successfully.")
                 st.rerun()
 
 
@@ -256,13 +256,13 @@ Otherwise respond naturally."""
                                             "INSERT INTO appointments (patient_id, doctor_id, appointment_date, appointment_time, reason) VALUES (%s, %s, %s, '10:00:00', %s)",
                                             (patient['id'], doc['id'], next_date.isoformat(), reason)
                                         )
-                                        st.success(f"✅ Auto-booked appointment with {doc_name} on {next_date} at 10:00 AM!")
+                                        st.success(f"Auto-booked appointment with {doc_name} on {next_date} at 10:00 AM!")
                             except (json.JSONDecodeError, IndexError, KeyError):
                                 pass  # Not a booking action
                     except Exception as e:
                         st.error(f"Error: {e}")
                 else:
-                    st.info("⚠️ No API key found. Using mock response.")
+                    st.info("No API key found. Using mock response.")
                     st.markdown(f"""
                     <div style="background-color: #fffefc; padding: 28px; border-radius: 14px; border: 1px solid #efeeeb;">
                         <p style="font-family: 'Cormorant Garamond', serif; font-size: 23px; color: #0f3e17; margin-bottom: 14px;">Hello, {user['full_name']}</p>

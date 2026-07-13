@@ -3,10 +3,21 @@ db.py — Database Connection Layer
 Provides helper functions for connecting to the remote TiDB Cloud MySQL database
 and executing queries safely using pymysql.
 """
-
-import pymysql
+try:
+    import pymysql
+except ModuleNotFoundError:
+    import sys, subprocess
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "pymysql"])
+finally:
+    import pymysql
 import os
-from dotenv import load_dotenv
+try:
+    from dotenv import load_dotenv
+except ModuleNotFoundError:
+    import sys, subprocess
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "python-dotenv"])
+finally:
+    from dotenv import load_dotenv
 
 load_dotenv()
 
