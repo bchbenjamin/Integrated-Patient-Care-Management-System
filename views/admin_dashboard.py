@@ -1,3 +1,4 @@
+from icons import get_svg_icon
 """
 admin_dashboard.py — Admin Console
 Full oversight: metrics, create doctors, manage patients, analytics.
@@ -75,7 +76,7 @@ def _render_analytics():
                      color_discrete_sequence=EASE_COLORS, hole=0.4)
         fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
                           font=dict(family='Inter, sans-serif', color='#222222'))
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
     # Appointments over time
     data2 = fetch_all("""
@@ -91,7 +92,7 @@ def _render_analytics():
         fig2.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
                            font=dict(family='Inter, sans-serif', color='#222222'),
                            xaxis_title='Date', yaxis_title='Count')
-        st.plotly_chart(fig2, use_container_width=True)
+        st.plotly_chart(fig2, width='stretch')
 
     # Doctor workload
     data3 = fetch_all("""
@@ -107,7 +108,7 @@ def _render_analytics():
                       color_discrete_sequence=['#b1dbb8'])
         fig3.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
                            font=dict(family='Inter, sans-serif', color='#222222'))
-        st.plotly_chart(fig3, use_container_width=True)
+        st.plotly_chart(fig3, width='stretch')
 
 
 def _render_create_doctor():
@@ -254,7 +255,7 @@ def _render_all_appointments():
         df['appointment_time'] = df['appointment_time'].apply(lambda x: str(x)[:5] if x else '')
         st.dataframe(
             df[['patient_name', 'doctor_name', 'specialty', 'appointment_date', 'appointment_time', 'status', 'reason']],
-            use_container_width=True, hide_index=True
+            width='stretch', hide_index=True
         )
     else:
         st.info("No appointments yet.")

@@ -9,14 +9,14 @@ import base64
 import os
 import datetime
 from auth import login_user, register_patient, validate_password
-from pages import admin_dashboard, doctor_dashboard, patient_dashboard, calendar_view
+from views import admin_dashboard, doctor_dashboard, patient_dashboard, calendar_view
 
 # --- Layout Configuration ---
 st.set_page_config(
     page_title="Ease Health — Integrated Patient Care",
     page_icon="assets/ease_logo.png",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 
 # --- Helper to load images as base64 ---
@@ -56,15 +56,7 @@ html, body, [class*="st-"] {
     color: var(--color-charcoal) !important;
 }
 
-/* Hide default Streamlit header & hamburger */
-header[data-testid="stHeader"] {
-    display: none !important;
-}
 
-/* Hide Streamlit sidebar collapse control if any */
-[data-testid="collapsedControl"] {
-    display: none !important;
-}
 
 /* Typography */
 h1, h2, h3 {
@@ -149,6 +141,14 @@ div[data-testid="stMetricLabel"] {
     overflow: hidden;
 }
 
+/* Hide Streamlit Native Elements */
+a.header-anchor {
+    display: none !important;
+}
+[data-testid="collapsedControl"] {
+    display: none !important;
+}
+
 /* Expander */
 .streamlit-expanderHeader {
     font-size: 14px !important;
@@ -171,6 +171,14 @@ if 'page' not in st.session_state:
 # NOT LOGGED IN — LOGIN / REGISTER
 # ==========================================
 if not st.session_state['logged_in']:
+    # Hide sidebar completely on the login page
+    st.markdown("""
+        <style>
+            [data-testid="stSidebar"] { display: none !important; }
+            [data-testid="collapsedControl"] { display: none !important; }
+        </style>
+    """, unsafe_allow_html=True)
+
     _, col, _ = st.columns([1, 1.2, 1])
 
     with col:
@@ -286,21 +294,21 @@ else:
 
         st.markdown("<br>", unsafe_allow_html=True)
         
-        if st.button("Dashboard", use_container_width=True):
+        if st.button("Dashboard", width='stretch'):
             st.session_state['page'] = 'dashboard'
             st.rerun()
             
-        if st.button("Calendar", use_container_width=True):
+        if st.button("Calendar", width='stretch'):
             st.session_state['page'] = 'calendar'
             st.rerun()
 
-        if st.button("Settings", use_container_width=True):
+        if st.button("Settings", width='stretch'):
             st.session_state['page'] = 'settings'
             st.rerun()
 
         st.markdown("<br><br><br>", unsafe_allow_html=True)
         
-        if st.button("Sign Out", use_container_width=True):
+        if st.button("Sign Out", width='stretch'):
             st.session_state['logged_in'] = False
             st.session_state['user'] = None
             st.session_state['page'] = 'dashboard'
@@ -310,29 +318,47 @@ else:
     if page == 'calendar':
         calendar_view.render(user)
     elif page == 'settings':
-        st.markdown("<h2>Settings</h2>", unsafe_allow_html=True)
-        st.markdown("<h4>Change Password</h4>", unsafe_allow_html=True)
-        with st.form("change_password_form"):
-            old_pw = st.text_input("Current Password", type="password")
-            new_pw = st.text_input("New Password", type="password", help="Min 8 chars, 1 uppercase, 1 number, 1 special char")
-            if st.form_submit_button("Update Password"):
-                if not old_pw or not new_pw:
-                    st.error("Please fill in all fields.")
-                else:
-                    user_record = validate_password(user['email'], old_pw)
-                    if user_record:
-                        # Simple inline validation for new password
-                        import re
-                        if len(new_pw) < 8 or not re.search(r"[A-Z]", new_pw) or not re.search(r"\d", new_pw) or not re.search(r"[!@#$%^&*(),.?\":{}|<>]", new_pw):
-                            st.error("Password must be at least 8 chars long and contain an uppercase letter, a number, and a special character.")
-                        else:
-                            import bcrypt
-                            from db import execute_query
-                            new_hash = bcrypt.hashpw(new_pw.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-                            execute_query("UPDATE users SET password_hash = %s WHERE id = %s", (new_hash, user['id']))
-                            st.success("Password updated successfully!")
+        st.html("<h2>Settings</h2>")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.html("<h4>Change Password</h4>")
+            with st.form("change_password_form"):
+                old_pw = st.text_input("Current Password", type="password")
+                new_pw = st.text_input("New Password", type="password", help="Min 8 chars, 1 uppercase, 1 number, 1 special char")
+                if st.form_submit_button("Update Password", width='stretch'):
+                    if not old_pw or not new_pw:
+                        st.error("Please fill in all fields.")
                     else:
-                        st.error("Incorrect current password.")
+                        user_record = validate_password(user['email'], old_pw)
+                        if user_record:
+                            import re
+                            if len(new_pw) < 8 or not re.search(r"[A-Z]", new_pw) or not re.search(r"\d", new_pw) or not re.search(r"[!@#$%^&*(),.?\":{}|<>]", new_pw):
+                                st.error("Password must be at least 8 chars long and contain an uppercase letter, a number, and a special character.")
+                            else:
+                                import bcrypt
+                                from db import execute_query
+                                new_hash = bcrypt.hashpw(new_pw.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+                                execute_query("UPDATE users SET password_hash = %s WHERE id = %s", (new_hash, user['id']))
+                                st.success("Password updated successfully!")
+                        else:
+                            st.error("Incorrect current password.")
+
+        with col2:
+            if role == 'patient':
+                st.html("<h4>Medical Profile</h4>")
+                from db import fetch_one, execute_query
+                patient = fetch_one("SELECT * FROM patients WHERE user_id = %s", (user['id'],))
+                if patient:
+                    with st.form("update_medical_form"):
+                        blood = st.selectbox("Blood Group", ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"], index=["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].index(patient['blood_group']) if patient['blood_group'] else 0)
+                        emergency = st.text_input("Emergency Contact", value=patient['emergency_contact'] or "")
+                        health = st.text_area("Health Condition (Current known issues)", value=patient['health_condition'] or "")
+                        
+                        if st.form_submit_button("Update Profile", width='stretch'):
+                            execute_query("UPDATE patients SET blood_group=%s, emergency_contact=%s, health_condition=%s WHERE id=%s", (blood, emergency, health, patient['id']))
+                            st.success("Profile updated!")
     elif page == 'dashboard':
         if role == 'admin':
             admin_dashboard.render(user)

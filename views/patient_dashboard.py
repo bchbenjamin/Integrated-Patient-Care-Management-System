@@ -1,3 +1,4 @@
+from icons import get_svg_icon
 """
 patient_dashboard.py — Patient Dashboard
 Health summary, book appointments, history, AI assistant with profile context.
@@ -165,11 +166,54 @@ def _render_history(patient):
 
 
 def _render_ai_assistant(patient, user):
-    st.markdown("<div class='eyebrow'>AI CLINICAL ASSISTANT</div>", unsafe_allow_html=True)
-    st.markdown("<h2 style='margin-top:0;'>Intelligent Query</h2>", unsafe_allow_html=True)
+    from db import fetch_all, fetch_one, execute_query
+    from icons import get_svg_icon
+    st.html("<div class='eyebrow'>AI CLINICAL ASSISTANT</div>")
+    st.html(f"<h2 style='margin-top:0;'>{get_svg_icon('ai', size=28)} Intelligent Query</h2>")
 
-    # Build profile context
-    upcoming = fetch_all("""
+    # Thread Management
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        # Fetch available threads
+        # Group by thread_id and get the first message for the title
+        existing_threads = fetch_all("SELECT thread_id, MIN(created_at) as started, (SELECT message FROM ai_threads a2 WHERE a2.thread_id = ai_threads.thread_id ORDER BY created_at ASC LIMIT 1) as first_msg FROM ai_threads WHERE patient_id = %s GROUP BY thread_id ORDER BY started DESC", (patient['id'],))
+        
+        thread_map = {"New Chat": "New Chat"}
+        for t in existing_threads:
+            preview = (t['first_msg'][:30] + '...') if t['first_msg'] and len(t['first_msg']) > 30 else (t['first_msg'] or 'Empty Chat')
+            thread_map[t['thread_id']] = f"{t['started'].strftime('%b %d')} - {preview}"
+            
+        thread_ids = [t['thread_id'] for t in existing_threads]
+        options = ["New Chat"] + thread_ids
+        if 'current_thread' not in st.session_state:
+            st.session_state['current_thread'] = thread_ids[0] if thread_ids else "New Chat"
+        
+        selected_thread = st.selectbox("Conversation", options, index=options.index(st.session_state['current_thread']) if st.session_state['current_thread'] in options else 0, format_func=lambda x: thread_map[x])
+        st.session_state['current_thread'] = selected_thread
+        
+    with col2:
+        retention_options = {'1': '1 Hour', '24': '24 Hours', '168': '7 Days', '720': '30 Days', 'infinite': 'Infinite'}
+        current_ret = str(patient.get('chat_retention_hours', '1'))
+        if current_ret == 'None' or current_ret == '0':
+            current_ret = 'infinite'
+            
+        ret_keys = list(retention_options.keys())
+        idx = ret_keys.index(current_ret) if current_ret in ret_keys else 0
+        selected_ret = st.selectbox("Retention Policy", ret_keys, index=idx, format_func=lambda x: retention_options[x])
+        
+        if selected_ret != current_ret:
+            db_val = None if selected_ret == 'infinite' else int(selected_ret)
+            execute_query("UPDATE patients SET chat_retention_hours = %s WHERE id = %s", (db_val, patient['id']))
+            st.success("Saved!")
+            st.rerun()
+
+    # Cleanup expired threads
+    execute_query("DELETE FROM ai_threads WHERE expires_at IS NOT NULL AND expires_at <= NOW()")
+
+    active_thread_id = st.session_state['current_thread']
+    
+    # Build System Context
+    upcoming = fetch_all('''
         SELECT a.appointment_date, a.appointment_time, u.full_name as doctor_name, s.name as specialty
         FROM appointments a
         JOIN doctors d ON a.doctor_id = d.id
@@ -177,100 +221,129 @@ def _render_ai_assistant(patient, user):
         LEFT JOIN specialties s ON d.specialty_id = s.id
         WHERE a.patient_id = %s AND a.status = 'scheduled' AND a.appointment_date >= CURDATE()
         ORDER BY a.appointment_date
-    """, (patient['id'],))
+    ''', (patient['id'],))
 
-    available_doctors = fetch_all("""
-        SELECT u.full_name, s.name as specialty, d.id as doctor_id
+    doctors = fetch_all('''
+        SELECT u.full_name, s.name as specialty, d.id as doctor_id, d.availability
         FROM doctors d
         JOIN users u ON d.user_id = u.id
         LEFT JOIN specialties s ON d.specialty_id = s.id
-        WHERE d.availability = 'available'
-    """)
+    ''')
 
     upcoming_text = "\n".join([f"- {a['appointment_date']} at {str(a['appointment_time'])[:5]} with {a['doctor_name']} ({a['specialty']})" for a in upcoming]) if upcoming else "No upcoming appointments."
-    doctors_text = "\n".join([f"- {d['full_name']} ({d['specialty']})" for d in available_doctors]) if available_doctors else "No doctors available."
+    docs_text = "\n".join([f"- {d['full_name']} ({d['specialty']}) - Avail: {d['availability']}" for d in doctors]) if doctors else "No doctors."
 
-    system_prompt = f"""You are a clinical assistant for the Ease Health patient care system.
-You are speaking with patient: {user['full_name']}
-Health condition: {patient.get('health_condition') or 'None recorded'}
-Blood group: {patient.get('blood_group') or 'Unknown'}
+    system_prompt = f"""You are an AI clinical assistant for Ease Health.
+Patient: {user['full_name']}
+Health Condition: {patient.get('health_condition') or 'None'}
+Blood Group: {patient.get('blood_group') or 'Unknown'}
 
-Upcoming appointments:
+Upcoming Appointments:
 {upcoming_text}
 
-Available doctors for booking:
-{doctors_text}
+Available Doctors:
+{docs_text}
 
-If the patient asks to book an appointment, recommend the most suitable doctor based on their health condition and the specialty of available doctors. Provide helpful medical guidance (but remind them you're an AI, not a replacement for professional advice).
-
-If the user wants to book, respond with a JSON block like:
+If the patient asks to update their health condition (e.g. they report feeling sick, new symptoms, or existing conditions), you MUST output a JSON block exactly like this:
 ```json
-{{"action": "book", "doctor_name": "...", "reason": "..."}}
+{{"action": "update_health", "condition": "new condition string here"}}
 ```
-Otherwise respond naturally."""
+If the patient asks to book an appointment, output a JSON block exactly like this:
+```json
+{{"action": "book", "doctor_name": "Dr. Name", "reason": "Reason"}}
+```
+Otherwise, respond naturally and helpfully."""
 
-    st.markdown(f"<p style='font-size:14px; color:#222; margin-bottom:21px;'>Powered by Groq & Langchain · Profile-aware for <strong>{user['full_name']}</strong></p>", unsafe_allow_html=True)
+    chat_container = st.container(height=400)
+    
+    threads = []
+    if active_thread_id != "New Chat":
+        threads = fetch_all("SELECT role, message FROM ai_threads WHERE thread_id = %s AND patient_id = %s ORDER BY created_at ASC", (active_thread_id, patient['id']))
 
-    user_input = st.text_area(
-        "Ask me anything about your health or appointments:",
-        value="What appointments do I have coming up?"
-    )
+    with chat_container:
+        if not threads:
+            st.info("Start a new conversation! It will be saved based on your retention policy.")
+        for msg in threads:
+            with st.chat_message(msg['role']):
+                st.markdown(msg['message'])
 
-    if st.button("Submit Query"):
-        if not user_input.strip():
-            st.warning("Please enter a query.")
-        else:
-            with st.spinner("Analyzing..."):
-                time.sleep(1)
-                load_dotenv()
-                api_key = os.getenv("GROQ_API_KEY")
+    prompt = st.chat_input("Ask me anything about your health or appointments...")
+    
+    # Auto-send initial query for new chat
+    if active_thread_id == "New Chat" and not prompt:
+        if st.button("Start Diagnostics & Appointment Check"):
+            prompt = "What appointments do I have coming up, and what is my health status?"
 
-                if api_key:
-                    try:
-                        from langchain_groq import ChatGroq
-                        from langchain_core.messages import HumanMessage, SystemMessage
-
-                        llm = ChatGroq(model="llama-3.1-8b-instant", temperature=0.3, api_key=api_key)
-                        response = llm.invoke([
-                            SystemMessage(content=system_prompt),
-                            HumanMessage(content=user_input)
-                        ])
-                        reply = response.content
-                        st.success("Analysis Complete")
-                        st.markdown(reply)
-
-                        # Check for auto-book action
-                        if '```json' in reply:
-                            try:
-                                json_str = reply.split('```json')[1].split('```')[0].strip()
-                                action_data = json.loads(json_str)
-                                if action_data.get('action') == 'book':
-                                    doc_name = action_data.get('doctor_name', '')
-                                    reason = action_data.get('reason', 'AI-recommended appointment')
-                                    # Find doctor
-                                    doc = fetch_one("SELECT d.id FROM doctors d JOIN users u ON d.user_id = u.id WHERE u.full_name LIKE %s", (f"%{doc_name}%",))
-                                    if doc:
-                                        from datetime import date, timedelta
-                                        next_date = date.today() + timedelta(days=2)
-                                        execute_query(
-                                            "INSERT INTO appointments (patient_id, doctor_id, appointment_date, appointment_time, reason) VALUES (%s, %s, %s, '10:00:00', %s)",
-                                            (patient['id'], doc['id'], next_date.isoformat(), reason)
-                                        )
-                                        st.success(f"Auto-booked appointment with {doc_name} on {next_date} at 10:00 AM!")
-                            except (json.JSONDecodeError, IndexError, KeyError):
-                                pass  # Not a booking action
-                    except Exception as e:
-                        st.error(f"Error: {e}")
-                else:
-                    st.info("No API key found. Using mock response.")
-                    st.markdown(f"""
-                    <div style="background-color: #fffefc; padding: 28px; border-radius: 14px; border: 1px solid #efeeeb;">
-                        <p style="font-family: 'Cormorant Garamond', serif; font-size: 23px; color: #0f3e17; margin-bottom: 14px;">Hello, {user['full_name']}</p>
-                        <p style="font-size: 14px; line-height: 1.5;">Based on your profile, your current health condition is: <strong>{patient.get('health_condition') or 'No condition recorded'}</strong>.</p>
-                        <p style="font-size: 14px; line-height: 1.5;">You have <strong>{len(upcoming)}</strong> upcoming appointment(s). {'Your next appointment is on ' + str(upcoming[0]['appointment_date']) + ' with ' + upcoming[0]['doctor_name'] + '.' if upcoming else 'Consider booking an appointment with one of our available specialists.'}</p>
-                    </div>
-                    """, unsafe_allow_html=True)
-
+    if prompt:
+        import uuid
+        if active_thread_id == "New Chat":
+            active_thread_id = str(uuid.uuid4())
+            st.session_state['current_thread'] = active_thread_id
+            
+        expires_sql = "NULL" if selected_ret == 'infinite' else f"DATE_ADD(NOW(), INTERVAL {selected_ret} HOUR)"
+        
+        # Save user msg
+        execute_query(f"INSERT INTO ai_threads (thread_id, patient_id, role, message, expires_at) VALUES (%s, %s, 'user', %s, {expires_sql})", 
+                      (active_thread_id, patient['id'], prompt))
+                      
+        # Display instantly
+        with chat_container:
+            with st.chat_message("user"):
+                st.markdown(prompt)
+            with st.chat_message("assistant"):
+                with st.spinner("Thinking..."):
+                    import time
+                    time.sleep(1)
+                    from dotenv import load_dotenv
+                    import os
+                    load_dotenv()
+                    api_key = os.getenv("GROQ_API_KEY")
+                    reply = "I'm sorry, no API key is configured. Mock reply: Your health is important to us!"
+                    
+                    if api_key:
+                        try:
+                            from langchain_groq import ChatGroq
+                            from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
+                            llm = ChatGroq(model="llama-3.1-8b-instant", temperature=0.3, api_key=api_key)
+                            
+                            msgs = [SystemMessage(content=system_prompt)]
+                            for t in threads:
+                                if t['role'] == 'user': msgs.append(HumanMessage(content=t['message']))
+                                else: msgs.append(AIMessage(content=t['message']))
+                            msgs.append(HumanMessage(content=prompt))
+                            
+                            response = llm.invoke(msgs)
+                            reply = response.content
+                            
+                            # Execute tools if found
+                            if '```json' in reply:
+                                try:
+                                    import json
+                                    j_str = reply.split('```json')[1].split('```')[0].strip()
+                                    data = json.loads(j_str)
+                                    if data.get('action') == 'update_health':
+                                        execute_query("UPDATE patients SET health_condition = %s WHERE id = %s", (data['condition'], patient['id']))
+                                        reply += "\n\n*(System: Health condition updated successfully)*"
+                                    elif data.get('action') == 'book':
+                                        doc_name = data.get('doctor_name', '')
+                                        reason = data.get('reason', 'AI booked')
+                                        doc = fetch_one("SELECT d.id FROM doctors d JOIN users u ON d.user_id = u.id WHERE u.full_name LIKE %s", (f"%{doc_name}%",))
+                                        if doc:
+                                            from datetime import date, timedelta
+                                            next_date = date.today() + timedelta(days=2)
+                                            execute_query("INSERT INTO appointments (patient_id, doctor_id, appointment_date, appointment_time, reason, status) VALUES (%s, %s, %s, '10:00:00', %s, 'scheduled')", 
+                                                          (patient['id'], doc['id'], next_date.isoformat(), reason))
+                                            reply += f"\n\n*(System: Appointment booked with {doc_name} for {next_date})*"
+                                except Exception as e:
+                                    print("Tool error:", e)
+                                    
+                        except Exception as e:
+                            reply = f"Error communicating with AI: {e}"
+                            
+                    st.markdown(reply)
+                    execute_query(f"INSERT INTO ai_threads (thread_id, patient_id, role, message, expires_at) VALUES (%s, %s, 'assistant', %s, {expires_sql})", 
+                                  (active_thread_id, patient['id'], reply))
+        st.rerun()
 
 def _render_analytics(patient):
     st.markdown("<div class='eyebrow'>MY ANALYTICS</div>", unsafe_allow_html=True)
@@ -290,7 +363,7 @@ def _render_analytics(patient):
                      color_discrete_sequence=EASE_COLORS, hole=0.4)
         fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
                           font=dict(family='Inter, sans-serif', color='#222222'))
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
     # Timeline
     timeline_data = fetch_all("""
@@ -313,7 +386,7 @@ def _render_analytics(patient):
         fig2.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
                            font=dict(family='Inter, sans-serif', color='#222222'),
                            xaxis_title='Date', yaxis_title='Doctor')
-        st.plotly_chart(fig2, use_container_width=True)
+        st.plotly_chart(fig2, width='stretch')
 
     if not data and not timeline_data:
         st.info("No appointment data to visualize yet.")

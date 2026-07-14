@@ -1,3 +1,4 @@
+from icons import get_svg_icon
 """
 doctor_dashboard.py — Doctor Dashboard
 My schedule, my patients, availability toggle, health condition editing, notes.
@@ -26,17 +27,13 @@ def render(user):
     st.markdown(f"<p style='font-size:14px; color:#222;'>{spec_name} · {doctor['qualification'] or ''} · {doctor['experience_years'] or 0} years experience</p>", unsafe_allow_html=True)
 
     # Availability toggle
-    avail_options = ['available', 'busy', 'off_duty']
-    avail_labels = {'available': 'Available', 'busy': 'Busy', 'off_duty': 'Off Duty'}
-    current_avail = doctor['availability']
+    current_avail = doctor['availability'] or ""
 
     col_a, col_b = st.columns([3, 1])
     with col_a:
-        new_avail = st.selectbox(
+        new_avail = st.text_input(
             "My Availability",
-            avail_options,
-            index=avail_options.index(current_avail),
-            format_func=lambda x: avail_labels[x]
+            value=current_avail
         )
     with col_b:
         st.markdown("<br>", unsafe_allow_html=True)
@@ -124,7 +121,7 @@ def _render_schedule(doctor):
         df = pd.DataFrame(upcoming)
         df['appointment_date'] = pd.to_datetime(df['appointment_date']).dt.strftime('%Y-%m-%d')
         df['appointment_time'] = df['appointment_time'].apply(lambda x: str(x)[:5] if x else '')
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        st.dataframe(df, width='stretch', hide_index=True)
     else:
         st.info("No upcoming appointments.")
 
@@ -179,7 +176,7 @@ def _render_doctor_analytics(doctor):
         fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
                           font=dict(family='Inter, sans-serif', color='#222222'),
                           xaxis_title='Date', yaxis_title='Appointments')
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
     # Status breakdown
     status_data = fetch_all("""
@@ -195,4 +192,4 @@ def _render_doctor_analytics(doctor):
                       color_discrete_sequence=EASE_COLORS, hole=0.4)
         fig2.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
                            font=dict(family='Inter, sans-serif', color='#222222'))
-        st.plotly_chart(fig2, use_container_width=True)
+        st.plotly_chart(fig2, width='stretch')
