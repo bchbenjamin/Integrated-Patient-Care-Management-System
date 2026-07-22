@@ -35,7 +35,7 @@ Built with a stunning, custom-designed **Bioluminescent UI**, it rejects the ste
 ### 🤖 2. AI-Powered Smart Booking (Groq + LLaMA 3)
 - **Natural Language Appointments:** Patients can book appointments by simply typing what they need (e.g., *"I have a headache, need a doctor on Friday"*).
 - **Intelligent Routing:** The AI analyzes the symptoms, finds the appropriate specialist, checks their availability, and schedules the appointment automatically.
-- **Strict JSON Schema:** The LLM strictly outputs a pre-defined JSON format to ensure flawless database integration without hallucinations.
+- **Strict Tool Usage:** The LLM leverages safe Python method bindings (`@tool`) to interact with the database instead of executing raw SQL or relying on text-parsed JSON logic.
 
 ### 📅 3. Interactive Healthcare Scheduling
 - **Full Monthly Calendar:** A dynamic, color-coded calendar view built with `streamlit-calendar`.

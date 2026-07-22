@@ -168,6 +168,7 @@ def _render_history(patient):
 def _render_ai_assistant(patient, user):
     from db import fetch_all, fetch_one, execute_query
     from icons import get_svg_icon
+    from langchain_core.tools import tool
     st.html("<div class='eyebrow'>AI CLINICAL ASSISTANT</div>")
     st.html(f"<h2 style='margin-top:0;'>{get_svg_icon('ai', size=28)} Intelligent Query</h2>")
 
@@ -175,7 +176,6 @@ def _render_ai_assistant(patient, user):
     col1, col2 = st.columns([2, 1])
     with col1:
         # Fetch available threads
-        # Group by thread_id and get the first message for the title
         existing_threads = fetch_all("SELECT thread_id, MIN(created_at) as started, (SELECT message FROM ai_threads a2 WHERE a2.thread_id = ai_threads.thread_id ORDER BY created_at ASC LIMIT 1) as first_msg FROM ai_threads WHERE patient_id = %s GROUP BY thread_id ORDER BY started DESC", (patient['id'],))
         
         thread_map = {"New Chat": "New Chat"}
@@ -244,15 +244,12 @@ Upcoming Appointments:
 Available Doctors:
 {docs_text}
 
-If the patient asks to update their health condition (e.g. they report feeling sick, new symptoms, or existing conditions), you MUST output a JSON block exactly like this:
-```json
-{{"action": "update_health", "condition": "new condition string here"}}
-```
-If the patient asks to book an appointment, output a JSON block exactly like this:
-```json
-{{"action": "book", "doctor_name": "Dr. Name", "reason": "Reason"}}
-```
-Otherwise, respond naturally and helpfully."""
+Guardrails & Instructions:
+- Only provide general medical guidance, do NOT diagnose or prescribe. Emphasize consulting a doctor.
+- When formatting your output, heavily use Markdown. Use bold, italics, headers, lists, and tables where appropriate to make information readable.
+- If you need to perform actions on behalf of the user, use the provided tools.
+- Do NOT output raw JSON blocks for actions anymore; use the tools provided to you.
+- Respond naturally and helpfully."""
 
     chat_container = st.container(height=400)
     
@@ -265,7 +262,7 @@ Otherwise, respond naturally and helpfully."""
             st.info("Start a new conversation! It will be saved based on your retention policy.")
         for msg in threads:
             with st.chat_message(msg['role']):
-                st.markdown(msg['message'])
+                st.markdown(msg['message'], unsafe_allow_html=True)
 
     prompt = st.chat_input("Ask me anything about your health or appointments...")
     
@@ -289,7 +286,7 @@ Otherwise, respond naturally and helpfully."""
         # Display instantly
         with chat_container:
             with st.chat_message("user"):
-                st.markdown(prompt)
+                st.markdown(prompt, unsafe_allow_html=True)
             with st.chat_message("assistant"):
                 with st.spinner("Thinking..."):
                     import time
@@ -304,7 +301,33 @@ Otherwise, respond naturally and helpfully."""
                         try:
                             from langchain_groq import ChatGroq
                             from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
+                            
+                            @tool
+                            def update_health_condition(new_condition: str) -> str:
+                                """Updates the patient's health condition in the database."""
+                                execute_query("UPDATE patients SET health_condition = %s WHERE id = %s", (new_condition, patient['id']))
+                                return f"Health condition successfully updated to: {new_condition}"
+
+                            @tool
+                            def book_appointment(doctor_name: str, reason: str, date_iso: str, time_str: str) -> str:
+                                """Books an appointment. 'date_iso' should be YYYY-MM-DD. 'time_str' should be HH:MM:SS."""
+                                doc = fetch_one("SELECT d.id FROM doctors d JOIN users u ON d.user_id = u.id WHERE u.full_name LIKE %s", (f"%{doctor_name}%",))
+                                if not doc:
+                                    return f"Doctor matching '{doctor_name}' not found."
+                                execute_query("INSERT INTO appointments (patient_id, doctor_id, appointment_date, appointment_time, reason, status) VALUES (%s, %s, %s, %s, %s, 'scheduled')", 
+                                              (patient['id'], doc['id'], date_iso, time_str, reason))
+                                return f"Appointment successfully booked with {doctor_name} on {date_iso} at {time_str}."
+                                
+                            @tool
+                            def get_available_specialties() -> str:
+                                """Returns a list of all available medical specialties."""
+                                specs = fetch_all("SELECT name FROM specialties")
+                                return ", ".join([s['name'] for s in specs]) if specs else "No specialties found."
+                                
+                            tools = [update_health_condition, book_appointment, get_available_specialties]
+                            
                             llm = ChatGroq(model="llama-3.1-8b-instant", temperature=0.3, api_key=api_key)
+                            llm_with_tools = llm.bind_tools(tools)
                             
                             msgs = [SystemMessage(content=system_prompt)]
                             for t in threads:
@@ -312,35 +335,35 @@ Otherwise, respond naturally and helpfully."""
                                 else: msgs.append(AIMessage(content=t['message']))
                             msgs.append(HumanMessage(content=prompt))
                             
-                            response = llm.invoke(msgs)
-                            reply = response.content
+                            response = llm_with_tools.invoke(msgs)
                             
-                            # Execute tools if found
-                            if '```json' in reply:
-                                try:
-                                    import json
-                                    j_str = reply.split('```json')[1].split('```')[0].strip()
-                                    data = json.loads(j_str)
-                                    if data.get('action') == 'update_health':
-                                        execute_query("UPDATE patients SET health_condition = %s WHERE id = %s", (data['condition'], patient['id']))
-                                        reply += "\n\n*(System: Health condition updated successfully)*"
-                                    elif data.get('action') == 'book':
-                                        doc_name = data.get('doctor_name', '')
-                                        reason = data.get('reason', 'AI booked')
-                                        doc = fetch_one("SELECT d.id FROM doctors d JOIN users u ON d.user_id = u.id WHERE u.full_name LIKE %s", (f"%{doc_name}%",))
-                                        if doc:
-                                            from datetime import date, timedelta
-                                            next_date = date.today() + timedelta(days=2)
-                                            execute_query("INSERT INTO appointments (patient_id, doctor_id, appointment_date, appointment_time, reason, status) VALUES (%s, %s, %s, '10:00:00', %s, 'scheduled')", 
-                                                          (patient['id'], doc['id'], next_date.isoformat(), reason))
-                                            reply += f"\n\n*(System: Appointment booked with {doc_name} for {next_date})*"
-                                except Exception as e:
-                                    print("Tool error:", e)
-                                    
+                            if response.tool_calls:
+                                tool_messages = []
+                                for tool_call in response.tool_calls:
+                                    tool_name = tool_call["name"]
+                                    tool_args = tool_call["args"]
+                                    tool_result = "Tool not found."
+                                    for t in tools:
+                                        if t.name == tool_name:
+                                            try:
+                                                tool_result = t.invoke(tool_args)
+                                            except Exception as e:
+                                                tool_result = f"Error executing tool: {str(e)}"
+                                            break
+                                    from langchain_core.messages import ToolMessage
+                                    tool_messages.append(ToolMessage(content=tool_result, tool_call_id=tool_call["id"]))
+                                
+                                msgs.append(response)
+                                msgs.extend(tool_messages)
+                                final_response = llm_with_tools.invoke(msgs)
+                                reply = final_response.content
+                            else:
+                                reply = response.content
+                                
                         except Exception as e:
                             reply = f"Error communicating with AI: {e}"
                             
-                    st.markdown(reply)
+                    st.markdown(reply, unsafe_allow_html=True)
                     execute_query(f"INSERT INTO ai_threads (thread_id, patient_id, role, message, expires_at) VALUES (%s, %s, 'assistant', %s, {expires_sql})", 
                                   (active_thread_id, patient['id'], reply))
         st.rerun()

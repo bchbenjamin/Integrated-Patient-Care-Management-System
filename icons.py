@@ -32,7 +32,7 @@ def get_svg_icon(name, size=24, color='#0f3e17', margin_right=8):
     if color != '#0f3e17':
         svg_str = svg_str.replace("stroke='#0f3e17'", f"stroke='{color}'")
     
+    # Base64 encode the SVG string
+    b64 = base64.b64encode(svg_str.encode('utf-8')).decode('utf-8')
     margin = f"margin-right:{margin_right}px;" if margin_right > 0 else ""
-    # Inject styling into the SVG tag
-    svg_str = svg_str.replace("<svg ", f"<svg style='width:{size}px; height:{size}px; display:inline-block; vertical-align:middle; {margin}' ")
-    return svg_str
+    return f"<img src='data:image/svg+xml;base64,{b64}' style='width:{size}px; height:{size}px; display:inline-block; vertical-align:middle; {margin}'>"

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ease Health — Integrated Patient Care</title>
+    <link rel="stylesheet" href="/static/style.css">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    {% if request.session.get("user") %}
+    <div class="sidebar">
+        <h2>Ease Health</h2>
+        <div style="font-size: 13px; font-weight: 600; color: #71717a; margin-bottom: 24px;">
+            Logged in as {{ request.session.user.full_name }} ({{ request.session.user.role | title }})
+        </div>
+        <a href="/">Dashboard</a>
+        <a href="/calendar">Calendar</a>
+        <a href="/settings">Settings</a>
+        <div style="flex-grow: 1;"></div>
+        <a href="/logout" style="margin-top: auto;">Sign Out</a>
+    </div>
+    {% endif %}
+
+    <div class="main-content">
+        {% block content %}{% endblock %}
+        <hr style="border: none; border-top: 1px solid var(--color-border-mist); margin: 64px 0 21px 0;">
+        <p style="text-align: center; color: var(--color-charcoal); font-size: 11px;">Integrated Patient Care Management System</p>
+    </div>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

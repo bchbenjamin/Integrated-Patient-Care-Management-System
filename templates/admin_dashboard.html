@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="eyebrow">ADMINISTRATOR DASHBOARD</div>
+<h2>System Overview</h2>
+
+<div class="flex-row">
+    <div class="card" style="flex:1;">
+        <div class="eyebrow">TOTAL PATIENTS</div>
+        <div style="font-family: 'Cormorant Garamond', serif; font-size: 40px; color: var(--color-forest-ink);">
+            {{ stats.patients }}
+        </div>
+    </div>
+    <div class="card" style="flex:1;">
+        <div class="eyebrow">TOTAL DOCTORS</div>
+        <div style="font-family: 'Cormorant Garamond', serif; font-size: 40px; color: var(--color-forest-ink);">
+            {{ stats.doctors }}
+        </div>
+    </div>
+    <div class="card" style="flex:1;">
+        <div class="eyebrow">TOTAL APPOINTMENTS</div>
+        <div style="font-family: 'Cormorant Garamond', serif; font-size: 40px; color: var(--color-forest-ink);">
+            {{ stats.appointments }}
+        </div>
+    </div>
+</div>
+
+<div class="card-sage">
+    <h3>Quick Actions</h3>
+    <div class="flex-row">
+        <button class="btn-primary" style="flex:1;">Manage Doctors</button>
+        <button class="btn-primary" style="flex:1;">System Settings</button>
+        <button class="btn-primary" style="flex:1;">View Analytics</button>
+    </div>
+</div>
+{% endblock %}

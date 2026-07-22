@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="eyebrow">PHYSICIAN DASHBOARD</div>
+<h2>Welcome, Dr. {{ user.full_name }}</h2>
+
+<div class="flex-row">
+    <div class="flex-col" style="flex:2;">
+        <div class="card-sage">
+            <h3>Your Appointments</h3>
+            {% if appointments %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Patient</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for apt in appointments %}
+                    <tr>
+                        <td>{{ apt.appointment_date }}</td>
+                        <td>{{ apt.appointment_time }}</td>
+                        <td>
+                            {{ apt.patient_name }}<br>
+                            <small>{{ apt.gender }}, {{ apt.blood_group }}</small>
+                        </td>
+                        <td>{{ apt.status | title }}</td>
+                        <td>
+                            {% if apt.status == 'scheduled' %}
+                            <form method="POST" action="/update_appointment" style="display:inline;">
+                                <input type="hidden" name="id" value="{{ apt.id }}">
+                                <input type="hidden" name="status" value="completed">
+                                <button class="btn-primary" style="padding: 6px 12px; margin:0; width:auto; border-radius: 999px;">Mark Done</button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p>No scheduled appointments found.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="flex-col" style="flex:1;">
+        <div class="card">
+            <h3>Your Profile</h3>
+            <p><strong>Specialty:</strong> {{ doctor.specialty }}</p>
+            <p><strong>Qualification:</strong> {{ doctor.qualification }}</p>
+            <p><strong>Experience:</strong> {{ doctor.experience_years }} years</p>
+            
+            <hr style="border: none; border-top: 1px solid var(--color-border-mist); margin: 16px 0;">
+            
+            <h4>Availability</h4>
+            <form method="POST" action="/update_availability">
+                <select name="availability" style="margin-bottom: 12px;">
+                    <option value="available" {% if doctor.availability == 'available' %}selected{% endif %}>Available</option>
+                    <option value="busy" {% if doctor.availability == 'busy' %}selected{% endif %}>Busy</option>
+                    <option value="off_duty" {% if doctor.availability == 'off_duty' %}selected{% endif %}>Off Duty</option>
+                </select>
+                <button type="submit" class="btn-primary" style="margin-top:0;">Update Status</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

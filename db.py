@@ -11,7 +11,7 @@ except ModuleNotFoundError:
 finally:
     import pymysql
 import os
-import streamlit as st
+from functools import lru_cache
 try:
     from dotenv import load_dotenv
 except ModuleNotFoundError:
@@ -47,7 +47,7 @@ def execute_query(query, params=None):
         conn.close()
 
 
-@st.cache_data(ttl=15)
+@lru_cache(maxsize=128)
 def fetch_one(query, params=None):
     """Fetch a single row as a dict. Returns None if no row found."""
     conn = get_connection()
@@ -59,7 +59,7 @@ def fetch_one(query, params=None):
         conn.close()
 
 
-@st.cache_data(ttl=15)
+@lru_cache(maxsize=128)
 def fetch_all(query, params=None):
     """Fetch all rows as a list of dicts."""
     conn = get_connection()

@@ -28,6 +28,7 @@ def get_connection():
 def create_tables(cursor):
     """Create all required tables. Drops them first for clean updates."""
     print("Dropping existing tables to prevent conflicts...")
+    cursor.execute("DROP TABLE IF EXISTS ai_threads")
     cursor.execute("DROP TABLE IF EXISTS appointments")
     cursor.execute("DROP TABLE IF EXISTS patients")
     cursor.execute("DROP TABLE IF EXISTS doctors")
@@ -80,7 +81,21 @@ def create_tables(cursor):
         blood_group VARCHAR(5),
         health_condition TEXT,
         emergency_contact VARCHAR(20),
+        chat_retention_hours INT DEFAULT 1,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE ai_threads (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        thread_id VARCHAR(255) NOT NULL,
+        patient_id INT NOT NULL,
+        role ENUM('user', 'assistant') NOT NULL,
+        message TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        expires_at TIMESTAMP NULL,
+        FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE
     )
     """)
 
@@ -137,11 +152,31 @@ def seed_data(cursor):
     print("  → Admin seeded: admin@ease.health / Admin@1234")
 
     # --- Doctor Users ---
+    from faker import Faker
+    import random
+    fake = Faker('en_IN')
+
     doctors_data = [
         ("dr.sharma@ease.health", "Doctor@123", "Dr. Priya Sharma", "+91-9100000001", 1, "MD Cardiology, AIIMS", 12, "Specializes in interventional cardiology and preventive heart care."),
         ("dr.patel@ease.health", "Doctor@123", "Dr. Ravi Patel", "+91-9100000002", 4, "MD Neurology, CMC Vellore", 8, "Expert in epilepsy management and neurodegenerative disorders."),
         ("dr.gupta@ease.health", "Doctor@123", "Dr. Ananya Gupta", "+91-9100000003", 5, "MD Pediatrics, KEM Mumbai", 15, "Focuses on neonatal care and childhood developmental conditions."),
     ]
+    
+    # Generate 6 more doctors
+    for i in range(6):
+        spec_id = random.randint(1, 6)
+        exp_years = random.randint(3, 25)
+        doctors_data.append((
+            fake.unique.email(),
+            "Doctor@123",
+            "Dr. " + fake.name(),
+            fake.phone_number()[:15],
+            spec_id,
+            fake.job(),
+            exp_years,
+            fake.text(max_nb_chars=100)
+        ))
+
     for email, pwd, name, phone, spec_id, qual, exp, bio in doctors_data:
         cursor.execute(
             "INSERT INTO users (email, password_hash, role, full_name, phone) VALUES (%s, %s, 'doctor', %s, %s)",
@@ -152,7 +187,7 @@ def seed_data(cursor):
             "INSERT INTO doctors (user_id, specialty_id, qualification, experience_years, bio) VALUES (%s, %s, %s, %s, %s)",
             (user_id, spec_id, qual, exp, bio)
         )
-    print("  → 3 Doctors seeded.")
+    print(f"  → {len(doctors_data)} Doctors seeded.")
 
     # --- Patient Users ---
     patients_data = [
@@ -162,6 +197,23 @@ def seed_data(cursor):
         ("priya.nair@email.com", "Patient@123", "Priya Nair", "+91-9200000004", "1995-07-30", "Female", "AB+", "Seasonal allergies, no chronic conditions", "+91-9200000096"),
         ("dev.joshi@email.com", "Patient@123", "Dev Joshi", "+91-9200000005", "2015-01-12", "Male", "O-", "Childhood asthma, under pediatric care", "+91-9200000095"),
     ]
+    
+    # Generate 15 more patients
+    blood_groups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]
+    genders = ["Male", "Female", "Other"]
+    for i in range(15):
+        patients_data.append((
+            fake.unique.email(),
+            "Patient@123",
+            fake.name(),
+            fake.phone_number()[:15],
+            fake.date_of_birth(minimum_age=5, maximum_age=80).isoformat(),
+            random.choice(genders),
+            random.choice(blood_groups),
+            fake.text(max_nb_chars=50),
+            fake.phone_number()[:15]
+        ))
+
     patient_ids = []
     for email, pwd, name, phone, dob, gender, blood, condition, emg in patients_data:
         cursor.execute(
@@ -174,7 +226,7 @@ def seed_data(cursor):
             (user_id, dob, gender, blood, condition, emg)
         )
         patient_ids.append(cursor.lastrowid)
-    print("  → 5 Patients seeded.")
+    print(f"  → {len(patients_data)} Patients seeded.")
 
     # --- Appointments ---
     # Get doctor IDs
