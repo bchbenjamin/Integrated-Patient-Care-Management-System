@@ -12,7 +12,7 @@ except ModuleNotFoundError:
     subprocess.check_call([sys.executable, "-m", "pip", "install", "bcrypt"])
 finally:
     import bcrypt
-from db import fetch_one, execute_query
+from app.core.db import fetch_one, execute_query
 
 
 def hash_password(plain_password: str) -> str:

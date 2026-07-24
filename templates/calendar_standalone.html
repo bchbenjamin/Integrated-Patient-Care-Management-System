@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card-sage" style="max-width: 900px; margin: 0 auto; min-height: 80vh; position: relative;">
+    <h2 style="margin-bottom: 24px;">Full Schedule</h2>
+    <div id="standalone-calendar"></div>
+
+    <!-- Booking Modal (Hidden by default) -->
+    <div id="booking-modal" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:white; padding:24px; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.15); z-index:100; width:350px;">
+        <h3 style="margin-top:0;">Book Appointment</h3>
+        <form method="POST" action="/book" style="display:flex; flex-direction:column; gap:12px;">
+            <div style="display:flex; gap:8px; margin-bottom:8px;">
+                <div style="flex:1;">
+                    <label style="display:block; font-size:12px; font-weight:bold;">Date</label>
+                    <input type="date" name="date" id="modal-date" required style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px;">
+                </div>
+                <div style="flex:1;">
+                    <label style="display:block; font-size:12px; font-weight:bold;">Time</label>
+                    <input type="time" name="time" id="modal-time" required style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px;">
+                </div>
+            </div>
+            
+            {% if user.role == 'patient' %}
+            <div>
+                <label style="display:block; font-size:12px; font-weight:bold;">Doctor</label>
+                <select name="doctor_id" required style="width:100%; padding:6px;">
+                    <option value="">-- Choose a Specialist --</option>
+                    {% for doc in doctors %}
+                    <option value="{{ doc.id }}">{{ doc.full_name }} ({{ doc.specialty }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label style="display:block; font-size:12px; font-weight:bold;">Reason</label>
+                <textarea name="reason" rows="2" required style="width:100%; padding:6px;"></textarea>
+            </div>
+            <div style="display:flex; gap:8px; margin-top:8px;">
+                <button type="submit" class="btn-primary" style="flex:1;">Book Now</button>
+                <button type="button" class="btn-primary" style="flex:1; background:#ccc; color:#333;" onclick="document.getElementById('booking-modal').style.display='none'">Cancel</button>
+            </div>
+            {% else %}
+            <p style="font-size:13px;">Doctors cannot book appointments for themselves here.</p>
+            <button type="button" class="btn-primary" style="background:#ccc; color:#333;" onclick="document.getElementById('booking-modal').style.display='none'">Close</button>
+            {% endif %}
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var calendarEl = document.getElementById('standalone-calendar');
+        var rawAppointments = {{ json_appointments | safe }};
+        var isPatient = "{{ user.role }}" === "patient";
+
+        var events = rawAppointments.map(function(apt) {
+            var title = isPatient ? apt.doctor_name : apt.patient_name;
+            return {
+                title: title + ' - ' + apt.status,
+                start: apt.appointment_date + 'T' + apt.appointment_time,
+                backgroundColor: apt.status === 'scheduled' ? '#0f3e17' : '#555',
+                borderColor: 'transparent'
+            };
+        });
+
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'timeGridWeek',
+            events: events,
+            height: 600,
+            slotMinTime: '08:00:00',
+            slotMaxTime: '20:00:00',
+            allDaySlot: false,
+            selectable: isPatient,
+            selectMirror: true,
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay'
+            },
+            select: function(info) {
+                if(!isPatient) return;
+                
+                // Show modal
+                document.getElementById('booking-modal').style.display = 'block';
+                
+                // Extract date and time
+                var dateStr = info.startStr.split('T')[0];
+                var timeStr = info.startStr.split('T')[1];
+                if(!timeStr) {
+                    timeStr = "09:00:00"; // default if they click on month view day
+                } else {
+                    timeStr = timeStr.substring(0,8);
+                }
+                
+                document.getElementById('modal-date').value = dateStr;
+                document.getElementById('modal-time').value = timeStr;
+                
+                calendar.unselect();
+            }
+        });
+        calendar.render();
+    });
+</script>
+{% endblock %}

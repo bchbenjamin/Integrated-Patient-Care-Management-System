@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex-col" style="max-width: 600px; margin: 0 auto;">
+    <div class="card-slate">
+        <h2 style="margin-bottom: 24px;">Book an Appointment</h2>
+        <form method="POST" action="/book" style="display:flex; flex-direction:column; gap:16px;">
+            <div>
+                <label style="display:block; font-weight:600; margin-bottom:4px;">Select Doctor</label>
+                <select name="doctor_id" required style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                    <option value="">-- Choose a Specialist --</option>
+                    {% for doc in doctors %}
+                    <option value="{{ doc.id }}">{{ doc.full_name }} ({{ doc.specialty }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div>
+                <label style="display:block; font-weight:600; margin-bottom:4px;">Date</label>
+                <input type="date" name="date" required style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+            </div>
+            
+            <div>
+                <label style="display:block; font-weight:600; margin-bottom:4px;">Time</label>
+                <input type="time" name="time" required style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+            </div>
+            
+            <div>
+                <label style="display:block; font-weight:600; margin-bottom:4px;">Reason for Visit</label>
+                <textarea name="reason" rows="3" required style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;"></textarea>
+            </div>
+            
+            <button type="submit" class="btn-primary" style="margin-top: 8px;">Confirm Booking</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
