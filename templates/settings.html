@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="card-slate" style="max-width: 600px; margin: 0 auto;">
+<div class="card card-slate card-animate" style="max-width: 600px; margin: 0 auto; animation-delay: 0s;">
     <h2 style="margin-bottom: 24px;">Account Settings</h2>
     <form method="POST" action="/settings" style="display:flex; flex-direction:column; gap:16px;">
-        <div>
+        <div class="form-group">
             <label style="display:block; font-weight:600; margin-bottom:4px;">Full Name</label>
             <input type="text" name="full_name" value="{{ user.full_name }}" required style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
         </div>
-        <div>
+        <div class="form-group">
             <label style="display:block; font-weight:600; margin-bottom:4px;">Phone Number</label>
             <input type="text" name="phone" value="{{ user.phone }}" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
         </div>

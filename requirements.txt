@@ -11,3 +11,5 @@ langchain-groq>=0.1.0
 langchain-core>=0.2.0
 pandas>=2.0.0
 faker>=20.0.0
+httpx
+weasyprint

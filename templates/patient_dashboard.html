@@ -4,14 +4,15 @@
 <div class="eyebrow">PATIENT DASHBOARD</div>
 <h2>Welcome, {{ user.full_name }}</h2>
 
-<div class="flex-row">
-    <div class="flex-col" style="flex:2;">
-        <div class="card-slate">
+<div class="dashboard-grid">
+    <!-- Left column: Medications + Calendar -->
+    <div style="display:flex; flex-direction:column; gap:24px;">
+        <div class="card-slate card-animate">
             <h3>My Medications</h3>
             {% if prescriptions %}
             <div style="display:flex; flex-direction:column; gap:12px;">
                 {% for p in prescriptions %}
-                <div style="padding:16px; border:1px solid #eee; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+                <div style="padding:16px; border:1px solid var(--color-border-mist); border-radius:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
                     <div>
                         <h4 style="margin:0 0 4px 0;">{{ p.medicine_name }}</h4>
                         <p style="margin:0; font-size:14px; color:#555;">{{ p.dosage }} — {{ p.frequency }}</p>
@@ -19,7 +20,7 @@
                     </div>
                     <div>
                         {% if p.taken_today > 0 %}
-                        <span style="color:#0f3e17; font-weight:bold; font-size:14px;">✔ Taken Today</span>
+                        <span style="color:var(--color-forest-ink); font-weight:bold; font-size:14px;">✔ Taken Today</span>
                         {% else %}
                         <form method="POST" action="/api/medication/log" style="margin:0;">
                             <input type="hidden" name="prescription_id" value="{{ p.id }}">
@@ -34,33 +35,20 @@
             <p style="color:#555;">You have no active prescriptions.</p>
             {% endif %}
         </div>
-
-        <div class="card-sage">
+        
+        <div class="card-sage card-animate" style="animation-delay: 0.1s;">
             <h3>Your Upcoming Appointments</h3>
             <div id='calendar'></div>
-            <br>
-            <button class="btn-primary" onclick="window.location.href='/book'">Book New Appointment (Manual)</button>
-            <button class="btn-primary" style="background-color: var(--color-sage-mist); color: black;" onclick="document.getElementById('chat-input').focus(); document.getElementById('chat-input').value = 'I want to book an appointment'; sendMessage();">Book via AI</button>
-        </div>
-
-        <div class="card-slate">
-            <h3>AI Clinical Assistant</h3>
-            <div style="margin-bottom: 8px;">
-                <label style="font-size:12px; margin-right:8px;"><input type="checkbox" id="voice-toggle"> Enable AI Voice</label>
-                <select id="voice-select" style="font-size:11px; padding:4px; border-radius:4px; max-width:150px;"></select>
-            </div>
-            <div id="chat-box" style="background: white; border-radius: 7px; padding: 14px; min-height: 200px; max-height: 400px; overflow-y: auto; margin-bottom: 14px; font-size: 14px;">
-                <p><strong>Assistant:</strong> Hello {{ user.full_name }}, how can I help you today? I can help you find specialists, book appointments, or update your health records.</p>
-            </div>
-            <div style="display:flex; gap: 8px;">
-                <input type="text" id="chat-input" placeholder="Type your query..." style="flex:1;">
-                <button type="button" class="btn-primary" style="width: auto; margin-top: 0;" onclick="sendMessage()">Send</button>
+            <div style="display:flex; gap:12px; margin-top:16px; flex-wrap:wrap;">
+                <button class="btn-primary" style="flex:1; min-width:200px;" onclick="window.location.href='/book'">Book Appointment</button>
+                <button class="btn-primary" style="flex:1; min-width:200px; background:var(--color-mint-veil); color:var(--color-forest-ink);" onclick="document.getElementById('chat-input').focus(); document.getElementById('chat-input').value = 'I want to book an appointment'; sendMessage();">Book via AI</button>
             </div>
         </div>
     </div>
-
-    <div class="flex-col" style="flex:1;">
-        <div class="card">
+    
+    <!-- Right column: Profile + Prescriptions -->
+    <div style="display:flex; flex-direction:column; gap:24px;">
+        <div class="card card-animate" style="animation-delay: 0.15s;">
             <h3>Your Health Profile</h3>
             <p><strong>DOB:</strong> {{ patient.date_of_birth }}</p>
             <p><strong>Gender:</strong> {{ patient.gender }}</p>
@@ -69,6 +57,48 @@
             <hr style="border: none; border-top: 1px solid var(--color-border-mist); margin: 16px 0;">
             <h4>Current Health Conditions</h4>
             <p style="font-size: 14px; color: #555;">{{ patient.health_condition or 'None recorded.' }}</p>
+        </div>
+        
+        <div class="card-slate card-animate" style="animation-delay: 0.2s;">
+            <h3>My Prescriptions</h3>
+            <div class="table-responsive">
+                {% if prescriptions %}
+                <table style="width:100%; border-collapse: collapse; text-align:left;">
+                    <tr style="border-bottom:1px solid #ccc;">
+                        <th style="padding:8px;">Medicine</th>
+                        <th style="padding:8px;">Dosage</th>
+                        <th style="padding:8px;">Duration</th>
+                        <th style="padding:8px;">PDF</th>
+                    </tr>
+                    {% for p in prescriptions %}
+                    <tr style="border-bottom:1px solid #eee;">
+                        <td style="padding:8px; font-weight:bold;">{{ p.medicine_name }}</td>
+                        <td style="padding:8px;">{{ p.dosage }} — {{ p.frequency }}</td>
+                        <td style="padding:8px;">{{ p.duration_days }} days</td>
+                        <td style="padding:8px;"><a href="/prescriptions/{{ p.id }}/download" target="_blank" style="color:var(--color-forest-ink); text-decoration:underline;">Download</a></td>
+                    </tr>
+                    {% endfor %}
+                </table>
+                {% else %}
+                <p>No prescriptions yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Full-width: AI Chat -->
+    <div class="full-width card-slate card-animate" style="animation-delay: 0.3s;">
+        <h3>AI Clinical Assistant</h3>
+        <div style="margin-bottom:8px;">
+            <label style="font-size:12px; margin-right:8px;"><input type="checkbox" id="voice-toggle"> Enable AI Voice</label>
+            <select id="voice-select" style="font-size:11px; padding:4px; border-radius:4px; max-width:150px;"></select>
+        </div>
+        <div id="chat-messages" class="chat-messages">
+            <div class="chat-bubble assistant">Hello {{ user.full_name }}, how can I help you today? I can help you find specialists, book appointments, or update your health records.</div>
+        </div>
+        <div class="chat-input-bar">
+            <input type="text" id="chat-input" placeholder="Type your query..." onkeypress="if(event.key === 'Enter') sendMessage()">
+            <button type="button" class="btn-primary" style="width:auto; margin:0;" onclick="sendMessage()">Send</button>
         </div>
     </div>
 </div>
@@ -92,8 +122,17 @@
         
         var calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
-            events: events,
-            height: 400
+            eventSources: [
+                { events: events },
+                {
+                    url: '/api/calendar/medications',
+                    method: 'GET',
+                    failure: function() {
+                        console.warn('Failed to load medication events');
+                    }
+                }
+            ],
+            height: 'auto'
         });
         calendar.render();
     });
@@ -125,17 +164,36 @@
     }
 
     // --- Chat Logic ---
+    function addBubble(text, isUser, extraHtml) {
+        const bubble = document.createElement('div');
+        bubble.className = 'chat-bubble ' + (isUser ? 'user' : 'assistant') + ' animate-in';
+        
+        let html = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        html = html.replace(/\n/g, '<br>');
+        if (extraHtml) html += extraHtml;
+        bubble.innerHTML = html;
+        
+        const container = document.getElementById('chat-messages');
+        container.appendChild(bubble);
+        container.scrollTop = container.scrollHeight;
+        bubble.addEventListener('animationend', () => bubble.classList.remove('animate-in'));
+    }
+
     function sendMessage() {
         const input = document.getElementById('chat-input');
-        const box = document.getElementById('chat-box');
         if (!input.value.trim()) return;
         
-        box.innerHTML += `<p><strong>You:</strong> ${input.value}</p>`;
         const query = input.value;
+        addBubble(query, true);
         input.value = '';
         
-        box.innerHTML += `<p id="loading"><em>Assistant is typing...</em></p>`;
-        box.scrollTop = box.scrollHeight;
+        // Show typing indicator
+        const typing = document.createElement('div');
+        typing.id = 'typing-indicator';
+        typing.className = 'chat-bubble assistant animate-in';
+        typing.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
+        document.getElementById('chat-messages').appendChild(typing);
+        document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
         
         fetch('/chat', {
             method: 'POST',
@@ -144,7 +202,8 @@
         })
         .then(response => response.json())
         .then(data => {
-            document.getElementById('loading').remove();
+            const typingEl = document.getElementById('typing-indicator');
+            if (typingEl) typingEl.remove();
             
             let replyText = data.reply;
             let actionHtml = '';
@@ -154,23 +213,25 @@
                 replyText = parts[0];
                 
                 try {
-                    let jsonStr = parts[1].trim();
-                    if (jsonStr.startsWith('```json')) jsonStr = jsonStr.substring(7);
-                    else if (jsonStr.startsWith('```')) jsonStr = jsonStr.substring(3);
-                    if (jsonStr.endsWith('```')) jsonStr = jsonStr.substring(0, jsonStr.length - 3);
-                    jsonStr = jsonStr.trim();
+                    const jsonMatch = parts[1].match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+                    let jsonStr = '';
+                    if (jsonMatch && jsonMatch[1]) {
+                        jsonStr = jsonMatch[1].trim();
+                    } else {
+                        jsonStr = parts[1].trim();
+                    }
                     
                     const payload = JSON.parse(jsonStr);
                     if (payload.action === 'confirm_appointment') {
                         actionHtml = `
-                        <div style="background:#fff; border:1px solid #ccc; border-radius:8px; padding:16px; margin-top:8px;">
-                            <h4 style="margin:0 0 12px 0;">Confirm Appointment</h4>
+                        <div style="background:var(--color-cream-paper); border:1px solid var(--color-border-mist); border-radius:14px; padding:16px; margin-top:12px;">
+                            <h4 style="margin:0 0 12px 0; font-family:'Cormorant Garamond',serif; font-weight:300; color:var(--color-forest-ink);">Confirm Appointment</h4>
                             <form method="POST" action="/book" style="display:flex; flex-direction:column; gap:8px;">
                                 <input type="hidden" name="doctor_id" value="${payload.doctor_id}">
                                 <div><strong>Doctor:</strong> ${payload.doctor_name}</div>
                                 <div><strong>Date:</strong> <input type="date" name="date" value="${payload.date}" required style="padding:4px;"></div>
                                 <div><strong>Time:</strong> <input type="time" name="time" value="${payload.time}" required style="padding:4px;"></div>
-                                <div><strong>Reason:</strong> <input type="text" name="reason" value="${payload.reason}" required style="padding:4px; width:100%;"></div>
+                                <div><strong>Reason:</strong> <input type="text" name="reason" value="${payload.reason}" required style="padding:4px; width:100%; box-sizing:border-box;"></div>
                                 <button type="submit" class="btn-primary" style="margin-top:8px;">Confirm & Book</button>
                             </form>
                         </div>
@@ -178,12 +239,11 @@
                     }
                 } catch(e) {
                     console.error("Failed to parse action payload", e);
-                    actionHtml = `<div style="color:red; font-size:12px;">Error rendering confirmation form. Please try again.</div>`;
+                    actionHtml = '<div style="color:red; font-size:12px;">Error rendering form. Please try again.</div>';
                 }
             }
-
-            box.innerHTML += `<p><strong>Assistant:</strong> ${replyText}</p>${actionHtml}`;
-            box.scrollTop = box.scrollHeight;
+            
+            addBubble(replyText, false, actionHtml);
             speakText(replyText);
             
             if (data.reload && !actionHtml) {
@@ -191,9 +251,9 @@
             }
         })
         .catch(error => {
-            document.getElementById('loading').remove();
-            box.innerHTML += `<p style="color:red;"><strong>Error:</strong> Failed to get response.</p>`;
-            box.scrollTop = box.scrollHeight;
+            const typingEl = document.getElementById('typing-indicator');
+            if (typingEl) typingEl.remove();
+            addBubble('Error: Failed to get response.', false);
         });
     }
 </script>

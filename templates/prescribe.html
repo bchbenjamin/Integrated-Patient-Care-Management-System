@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+
+{% block title %}New Prescription - Ease Health{% endblock %}
+
+{% block extra_head %}
+<style>
+.prescribe-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.schedule-toggle {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+.time-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.time-input-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.autocomplete-wrapper {
+    position: relative;
+}
+
+.autocomplete-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #fffefc;
+    border: 1px solid #b6ced5;
+    border-radius: 7px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 100;
+    display: none;
+    box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+    .autocomplete-results {
+        position: fixed;
+        top: 50%;
+        left: 5%;
+        width: 90%;
+        transform: translateY(-50%);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    
+    .prescribe-card {
+        padding: 28px !important;
+    }
+}
+
+.autocomplete-item {
+    padding: 10px;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    color: #222222;
+}
+
+.autocomplete-item:hover {
+    background: #e1f4df;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="prescribe-container">
+    <div class="eyebrow">PRESCRIBE MEDICATION</div>
+    <h1 style="font-family: 'Cormorant Garamond', serif; font-weight: 300; color: #0f3e17;">New Prescription</h1>
+    
+    <div class="card card-sage card-animate prescribe-card" style="padding: 28px 42px; border-radius: 14px;">
+        <form method="POST" action="/prescribe" id="prescribeForm">
+            <div class="form-group">
+                <label>Patient</label>
+                <select name="patient_id" required>
+                    <option value="">Select a patient...</option>
+                    {% for p in patients %}
+                    <option value="{{ p.id }}">{{ p.full_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group autocomplete-wrapper">
+                <label>Medicine Name</label>
+                <input type="text" id="medicineName" name="medicine_name" required autocomplete="off">
+                <div id="autocompleteResults" class="autocomplete-results"></div>
+            </div>
+            
+            <div class="form-group">
+                <label>Dosage</label>
+                <input type="text" name="dosage" placeholder="e.g. 500mg" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Schedule Type</label>
+                <div class="schedule-toggle">
+                    <label>
+                        <input type="radio" name="schedule_type" value="fixed_times" checked onchange="toggleSchedule()"> Fixed times per day
+                    </label>
+                    <label>
+                        <input type="radio" name="schedule_type" value="interval" onchange="toggleSchedule()"> Every N hours
+                    </label>
+                </div>
+            </div>
+            
+            <div id="fixedTimesContainer" class="form-group">
+                <label>Dose Times</label>
+                <div id="timeInputsList" class="time-inputs">
+                    <div class="time-input-row">
+                        <input type="time" class="dose-time" required>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-secondary" onclick="addTimeInput()" style="background: #b1dbb8; color: #0f3e17; border: none; padding: 5px 10px; border-radius: 7px; cursor: pointer;">+ Add Time</button>
+                <input type="hidden" name="dose_times" id="doseTimesHidden">
+            </div>
+            
+            <div id="intervalContainer" class="form-group" style="display: none;">
+                <label>Interval (Hours)</label>
+                <input type="number" name="interval_hours" min="1" max="72">
+            </div>
+            
+            <div class="form-group">
+                <label>Frequency (Instructions)</label>
+                <input type="text" name="frequency" placeholder="e.g. Twice daily after meals" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Duration (Days)</label>
+                <input type="number" name="duration_days" min="1" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Notes (Optional)</label>
+                <textarea name="notes" rows="3"></textarea>
+            </div>
+            
+            <button type="submit" class="btn btn-primary" style="background: #0f3e17; color: #fffefc; border-radius: 14px; border: none; padding: 12px 24px; cursor: pointer; font-family: 'Inter', sans-serif; width: 100%;">Generate Prescription</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let debounceTimer;
+    const medicineInput = document.getElementById('medicineName');
+    const resultsContainer = document.getElementById('autocompleteResults');
+    
+    medicineInput.addEventListener('input', function() {
+        clearTimeout(debounceTimer);
+        const query = this.value.trim();
+        
+        if (query.length < 2) {
+            resultsContainer.style.display = 'none';
+            return;
+        }
+        
+        debounceTimer = setTimeout(() => {
+            fetch(`/api/medicines/search?q=${encodeURIComponent(query)}`)
+                .then(res => res.json())
+                .then(data => {
+                    resultsContainer.innerHTML = '';
+                    if (data && data.length > 0) {
+                        data.forEach(item => {
+                            const div = document.createElement('div');
+                            div.className = 'autocomplete-item';
+                            div.textContent = item;
+                            div.onclick = function() {
+                                medicineInput.value = item;
+                                resultsContainer.style.display = 'none';
+                            };
+                            resultsContainer.appendChild(div);
+                        });
+                        resultsContainer.style.display = 'block';
+                    } else {
+                        resultsContainer.style.display = 'none';
+                    }
+                })
+                .catch(err => {
+                    console.error('Error fetching medicines:', err);
+                });
+        }, 300);
+    });
+    
+    document.addEventListener('click', function(e) {
+        if (!medicineInput.contains(e.target) && !resultsContainer.contains(e.target)) {
+            resultsContainer.style.display = 'none';
+        }
+    });
+
+    function toggleSchedule() {
+        const type = document.querySelector('input[name="schedule_type"]:checked').value;
+        const fixedContainer = document.getElementById('fixedTimesContainer');
+        const intervalContainer = document.getElementById('intervalContainer');
+        const timeInputs = document.querySelectorAll('.dose-time');
+        const intervalInput = document.querySelector('input[name="interval_hours"]');
+        
+        if (type === 'fixed_times') {
+            fixedContainer.style.display = 'block';
+            intervalContainer.style.display = 'none';
+            timeInputs.forEach(i => i.required = true);
+            intervalInput.required = false;
+            intervalInput.value = '';
+        } else {
+            fixedContainer.style.display = 'none';
+            intervalContainer.style.display = 'block';
+            timeInputs.forEach(i => i.required = false);
+            intervalInput.required = true;
+        }
+    }
+
+    function addTimeInput() {
+        const list = document.getElementById('timeInputsList');
+        const row = document.createElement('div');
+        row.className = 'time-input-row';
+        row.innerHTML = '<input type="time" class="dose-time" required> <button type="button" onclick="this.parentElement.remove()" style="background: transparent; color: #0f3e17; border: none; cursor: pointer; font-size: 1.2em;">×</button>';
+        list.appendChild(row);
+    }
+    
+    document.getElementById('prescribeForm').addEventListener('submit', function(e) {
+        const type = document.querySelector('input[name="schedule_type"]:checked').value;
+        if (type === 'fixed_times') {
+            const times = Array.from(document.querySelectorAll('.dose-time')).map(i => i.value).filter(v => v);
+            document.getElementById('doseTimesHidden').value = times.join(',');
+        } else {
+            document.getElementById('doseTimesHidden').value = '';
+        }
+    });
+</script>
+{% endblock %}

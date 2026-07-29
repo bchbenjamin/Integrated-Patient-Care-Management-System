@@ -162,27 +162,15 @@ CRITICAL RULES:
 class DoctorAITools:
     @staticmethod
     @tool
-    def get_doctor_patients(doctor_id: int) -> str:
-        """Get a list of all patients assigned to the doctor."""
-        patients = fetch_all("""
-            SELECT DISTINCT p.id, u.full_name 
-            FROM appointments a 
-            JOIN patients p ON a.patient_id = p.id 
-            JOIN users u ON p.user_id = u.id 
-            WHERE a.doctor_id = %s
-        """, (doctor_id,))
-        if not patients:
-            return "No patients found."
-        return "\n".join([f"Patient ID: {p['id']} | Name: {p['full_name']}" for p in patients])
-
-    @staticmethod
-    @tool
-    def draft_prescription_ai(patient_id: int, doctor_id: int, medicine_name: str, dosage: str, frequency: str, duration_days: int) -> str:
-        """Drafts a prescription. IMPORTANT: Never make up medication names, dosage, or frequency without confirming with the user."""
+    def draft_prescription_ai(patient_id: int, doctor_id: int, medicine_name: str, dosage: str, frequency: str, duration_days: int, schedule_type: str = "fixed_times", dose_times: str = "08:00,20:00", interval_hours: int = 0, notes: str = "") -> str:
+        """Drafts a prescription. schedule_type is either 'fixed_times' or 'interval'. 
+        For fixed_times, dose_times is a comma-separated list of HH:MM times (e.g. '08:00,14:00,20:00').
+        For interval, interval_hours is the number of hours between doses (e.g. 8).
+        IMPORTANT: Never make up medication names, dosage, or frequency without confirming with the user."""
         import json
         pat = fetch_one("SELECT u.full_name FROM patients p JOIN users u ON p.user_id = u.id WHERE p.id = %s", (patient_id,))
         if not pat:
-            return f"Error: Patient ID {patient_id} does not exist. Please use get_doctor_patients to find a valid patient ID."
+            return f"Error: Patient ID {patient_id} does not exist."
             
         payload = {
             "action": "confirm_prescription",
@@ -191,11 +179,15 @@ class DoctorAITools:
             "medicine_name": medicine_name,
             "dosage": dosage,
             "frequency": frequency,
-            "duration_days": duration_days
+            "duration_days": duration_days,
+            "schedule_type": schedule_type,
+            "dose_times": dose_times,
+            "interval_hours": interval_hours,
+            "notes": notes
         }
         return f"**ACTION_REQUIRED**\n```json\n{json.dumps(payload)}\n```"
 
-doctor_tools = [DoctorAITools.get_doctor_patients, DoctorAITools.draft_prescription_ai]
+doctor_tools = [DoctorAITools.draft_prescription_ai]
 llm_doctor_with_tools = llm.bind_tools(doctor_tools)
 
 @router.post("/doctor_chat")
@@ -208,14 +200,26 @@ async def doctor_chat_endpoint(request: Request, payload: ChatRequest):
     if not doctor:
         raise HTTPException(status_code=404, detail="Doctor profile not found")
 
+    patients = fetch_all("""
+        SELECT DISTINCT p.id, u.full_name 
+        FROM patients p
+        JOIN users u ON p.user_id = u.id
+        JOIN appointments a ON a.patient_id = p.id
+        WHERE a.doctor_id = %s
+    """, (doctor["id"],))
+    patient_list_str = "\n".join([f"- {p['full_name']} (Patient ID: {p['id']})" for p in patients]) if patients else "No patients currently assigned."
+
     sys_msg = SystemMessage(content=f"""
 You are the AI Clinical Assistant for Ease Health.
 You are helping the doctor: {user['full_name']}
 Their internal Doctor ID is: {doctor['id']}
 
+The doctor's current patients are:
+{patient_list_str}
+
 CRITICAL RULES:
 - Your job is to assist them in prescribing medications or retrieving patient info.
-- Use `get_doctor_patients` to find a patient ID by name if the doctor asks to prescribe to someone.
+- When the doctor asks to prescribe medication to a patient, use their Patient ID from the list above.
 - Use `draft_prescription_ai` to draft a prescription. (Always use the doctor's internal Doctor ID {doctor['id']}).
 - DO NOT tell the doctor that you have successfully prescribed the medication. You MUST tell them that you have "drafted" it and that they need to click the confirm button.
 - NEVER output raw JSON, tool call arguments, database IDs, or pipe-separated lists to the doctor EXCEPT when returning an **ACTION_REQUIRED** block. ALWAYS format data into natural, conversational language.
@@ -238,10 +242,7 @@ CRITICAL RULES:
             tool_args = tool_call["args"]
             
             tool_res = ""
-            if tool_name == "get_doctor_patients":
-                tool_args["doctor_id"] = doctor['id']
-                tool_res = DoctorAITools.get_doctor_patients.invoke(tool_args)
-            elif tool_name == "draft_prescription_ai":
+            if tool_name == "draft_prescription_ai":
                 tool_args["doctor_id"] = doctor['id']
                 tool_res = DoctorAITools.draft_prescription_ai.invoke(tool_args)
                 

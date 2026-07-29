@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 60" fill="none">
+  <!-- Leaf Icon -->
+  <g transform="translate(10, 8)">
+    <path d="M22 2C22 2 8 10 8 26C8 34 12 40 18 42C14 36 14 28 18 20C22 12 28 8 34 6C30 4 26 2 22 2Z" fill="#0f3e17"/>
+    <path d="M22 2C22 2 36 10 36 26C36 34 32 40 26 42C30 36 30 28 26 20C22 12 16 8 10 6C14 4 18 2 22 2Z" fill="#b1dbb8"/>
+    <line x1="22" y1="8" x2="22" y2="42" stroke="#0f3e17" stroke-width="1.5" opacity="0.5"/>
+  </g>
+  <!-- Text -->
+  <text x="58" y="30" font-family="'Cormorant Garamond', Georgia, serif" font-weight="300" font-size="28" fill="#0f3e17" letter-spacing="-0.5px">Ease Health</text>
+  <text x="58" y="48" font-family="'Inter', 'Helvetica Neue', sans-serif" font-weight="400" font-size="9" fill="#222222" letter-spacing="0.08em" text-transform="uppercase">INTEGRATED PATIENT CARE</text>
+</svg>

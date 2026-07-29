@@ -1,27 +1,27 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="card-sage" style="max-width: 900px; margin: 0 auto; min-height: 80vh; position: relative;">
+<div class="card-sage card-animate" style="max-width: 900px; margin: 0 auto; min-height: 80vh; position: relative;">
     <h2 style="margin-bottom: 24px;">Full Schedule</h2>
     <div id="standalone-calendar"></div>
 
     <!-- Booking Modal (Hidden by default) -->
-    <div id="booking-modal" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:white; padding:24px; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.15); z-index:100; width:350px;">
+    <div id="booking-modal" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:white; padding:24px; border-radius:14px; box-shadow:0 4px 12px rgba(0,0,0,0.15); z-index:100; width:90%; max-width: 350px;">
         <h3 style="margin-top:0;">Book Appointment</h3>
         <form method="POST" action="/book" style="display:flex; flex-direction:column; gap:12px;">
             <div style="display:flex; gap:8px; margin-bottom:8px;">
-                <div style="flex:1;">
+                <div class="form-group" style="flex:1;">
                     <label style="display:block; font-size:12px; font-weight:bold;">Date</label>
                     <input type="date" name="date" id="modal-date" required style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px;">
                 </div>
-                <div style="flex:1;">
+                <div class="form-group" style="flex:1;">
                     <label style="display:block; font-size:12px; font-weight:bold;">Time</label>
                     <input type="time" name="time" id="modal-time" required style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px;">
                 </div>
             </div>
             
             {% if user.role == 'patient' %}
-            <div>
+            <div class="form-group">
                 <label style="display:block; font-size:12px; font-weight:bold;">Doctor</label>
                 <select name="doctor_id" required style="width:100%; padding:6px;">
                     <option value="">-- Choose a Specialist --</option>
@@ -30,7 +30,7 @@
                     {% endfor %}
                 </select>
             </div>
-            <div>
+            <div class="form-group">
                 <label style="display:block; font-size:12px; font-weight:bold;">Reason</label>
                 <textarea name="reason" rows="2" required style="width:100%; padding:6px;"></textarea>
             </div>
@@ -65,19 +65,31 @@
             };
         });
 
+        var isMobile = window.innerWidth <= 768;
+        var initialView = (isMobile && !isPatient) ? 'listWeek' : (isMobile ? 'listWeek' : 'timeGridWeek');
+
         var calendar = new FullCalendar.Calendar(calendarEl, {
-            initialView: 'timeGridWeek',
-            events: events,
-            height: 600,
-            slotMinTime: '08:00:00',
-            slotMaxTime: '20:00:00',
+            initialView: initialView,
+            eventSources: [
+                { events: events },
+                {
+                    url: '/api/calendar/medications',
+                    method: 'GET',
+                    failure: function() {
+                        console.warn('Failed to load medication events');
+                    }
+                }
+            ],
+            height: 'auto',
+            slotMinTime: '06:00:00',
+            slotMaxTime: '22:00:00',
             allDaySlot: false,
             selectable: isPatient,
             selectMirror: true,
             headerToolbar: {
-                left: 'prev,next today',
+                left: isMobile ? 'prev,next' : 'prev,next today',
                 center: 'title',
-                right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                right: isMobile ? 'dayGridMonth,listWeek' : 'dayGridMonth,timeGridWeek,timeGridDay'
             },
             select: function(info) {
                 if(!isPatient) return;

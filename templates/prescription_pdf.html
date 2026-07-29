@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Prescription</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300&family=Inter:wght@400;500;600&display=swap');
+
+        @page {
+            size: A4 portrait;
+            margin: 20mm;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #fffefc; /* Cream Paper */
+            color: #222222; /* Charcoal */
+            margin: 0;
+            padding: 0;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Cormorant Garamond', serif;
+            font-weight: 300;
+            color: #0f3e17; /* Forest Ink */
+            margin: 0 0 10px 0;
+        }
+
+        /* Header Band */
+        .header-band {
+            background-color: #e1f4df; /* Keylime Wash */
+            padding: 20px 30px;
+            border-radius: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+        .header-logo img {
+            height: 60px;
+            width: auto;
+        }
+        .header-title-container {
+            text-align: right;
+        }
+        .header-title {
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+        .header-date {
+            font-size: 12px;
+            color: #222222;
+        }
+
+        /* Grid Layout */
+        .info-grid {
+            display: table;
+            width: 100%;
+            margin-bottom: 25px;
+        }
+        .info-col {
+            display: table-cell;
+            width: 50%;
+            vertical-align: top;
+        }
+        .info-box {
+            padding: 15px;
+            border: 1px solid #efeeeb; /* Border Mist */
+            border-radius: 14px;
+            background-color: #fffefc;
+        }
+        .info-box.left {
+            margin-right: 10px;
+        }
+        .info-box.right {
+            margin-left: 10px;
+        }
+        
+        .info-row {
+            margin-bottom: 8px;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #0f3e17;
+            display: inline-block;
+            width: 90px;
+        }
+        .info-value {
+            color: #222222;
+        }
+        .info-title {
+            font-size: 20px;
+            border-bottom: 1px solid #efeeeb;
+            padding-bottom: 5px;
+            margin-bottom: 12px;
+        }
+
+        /* Medicines Table */
+        .section-title {
+            font-size: 22px;
+            margin-bottom: 15px;
+            color: #0f3e17;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 25px;
+        }
+        th, td {
+            text-align: left;
+            padding: 12px 15px;
+            border-bottom: 1px solid #efeeeb;
+        }
+        th {
+            background-color: #b1dbb8; /* Sage Mist */
+            color: #0f3e17;
+            font-weight: 600;
+            border-bottom: none;
+        }
+        th:first-child {
+            border-top-left-radius: 14px;
+            border-bottom-left-radius: 14px;
+        }
+        th:last-child {
+            border-top-right-radius: 14px;
+            border-bottom-right-radius: 14px;
+        }
+        tr:nth-child(even) td {
+            background-color: #fcfcfc;
+        }
+
+        /* Notes Section */
+        .notes-section {
+            border: 1px solid #efeeeb;
+            border-radius: 14px;
+            padding: 20px;
+            margin-bottom: 40px;
+            background-color: #fffefc;
+        }
+        .notes-content {
+            white-space: pre-wrap;
+        }
+
+        /* Footer and Signature */
+        .footer-container {
+            display: table;
+            width: 100%;
+            margin-top: 40px;
+        }
+        .footer-left {
+            display: table-cell;
+            vertical-align: bottom;
+            width: 60%;
+        }
+        .footer-text {
+            font-size: 10px;
+            color: #0f3e17;
+            background-color: #e1f4df; /* Keylime Wash */
+            padding: 8px 12px;
+            border-radius: 7px;
+            display: inline-block;
+        }
+        .signature-box {
+            display: table-cell;
+            vertical-align: bottom;
+            text-align: center;
+            width: 40%;
+        }
+        .signature-line {
+            border-top: 1px solid #222222;
+            width: 80%;
+            margin: 0 auto 5px auto;
+        }
+        .signature-name {
+            font-weight: 600;
+            color: #0f3e17;
+        }
+        .signature-qual {
+            font-size: 12px;
+            color: #222222;
+        }
+        
+        /* Clearfix hack for floats if table layout isn't sufficient */
+        .clearfix::after {
+            content: "";
+            clear: both;
+            display: table;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-band">
+        <div class="header-logo">
+            <img src="data:image/svg+xml;base64,{{ logo_b64 }}" alt="Ease Health Logo">
+        </div>
+        <div class="header-title-container">
+            <h1 class="header-title">PRESCRIPTION</h1>
+            <div class="header-date">Generated on: {{ generated_at }}</div>
+        </div>
+    </div>
+
+    <div class="info-grid">
+        <div class="info-col">
+            <div class="info-box left">
+                <h2 class="info-title">Patient Information</h2>
+                <div class="info-row"><span class="info-label">Name:</span> <span class="info-value">{{ patient.full_name }}</span></div>
+                <div class="info-row"><span class="info-label">DOB/Age:</span> <span class="info-value">{{ patient.date_of_birth }}</span></div>
+                <div class="info-row"><span class="info-label">Gender:</span> <span class="info-value">{{ patient.gender }}</span></div>
+                <div class="info-row"><span class="info-label">Blood Grp:</span> <span class="info-value">{{ patient.blood_group }}</span></div>
+            </div>
+        </div>
+        <div class="info-col">
+            <div class="info-box right">
+                <h2 class="info-title">Consulting Physician</h2>
+                <div class="info-row"><span class="info-label">Doctor:</span> <span class="info-value">Dr. {{ doctor.full_name }}</span></div>
+                <div class="info-row"><span class="info-label">Specialty:</span> <span class="info-value">{{ doctor.specialty }}</span></div>
+                <div class="info-row"><span class="info-label">Qual.:</span> <span class="info-value">{{ doctor.qualification }}</span></div>
+            </div>
+        </div>
+    </div>
+
+    <h2 class="section-title">Medication Regimen</h2>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 5%;">#</th>
+                <th style="width: 35%;">Medicine Name</th>
+                <th style="width: 15%;">Dosage</th>
+                <th style="width: 30%;">Schedule / Frequency</th>
+                <th style="width: 15%;">Duration</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for med in medicines %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td><strong>{{ med.name }}</strong></td>
+                <td>{{ med.dosage }}</td>
+                <td>
+                    {{ med.frequency }}
+                    {% if med.dose_times %}
+                        <br><small style="color: #666;">(Times: {{ med.dose_times }})</small>
+                    {% elif med.interval_hours %}
+                        <br><small style="color: #666;">(Every {{ med.interval_hours }} hours)</small>
+                    {% endif %}
+                </td>
+                <td>{{ med.duration_days }} days</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5" style="text-align: center; color: #666;">No medicines prescribed.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% if notes %}
+    <div class="notes-section">
+        <h2 class="section-title" style="font-size: 18px; margin-bottom: 10px;">Clinical Notes &amp; Instructions</h2>
+        <div class="notes-content">{{ notes }}</div>
+    </div>
+    {% endif %}
+
+    <div class="footer-container">
+        <div class="footer-left">
+            <div class="footer-text">
+                This is a computer-generated prescription from Ease Health IPCMS
+            </div>
+        </div>
+        <div class="signature-box">
+            <div class="signature-line"></div>
+            <div class="signature-name">Dr. {{ doctor.full_name }}</div>
+            <div class="signature-qual">{{ doctor.qualification }}</div>
+        </div>
+    </div>
+
+</body>
+</html>

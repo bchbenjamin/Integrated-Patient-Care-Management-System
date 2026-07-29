@@ -1,0 +1,24 @@
+{
+  "name": "Ease Health IPCMS",
+  "short_name": "Ease Health",
+  "description": "Integrated Patient Care Management System",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fffefc",
+  "theme_color": "#0f3e17",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/static/branding/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/branding/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

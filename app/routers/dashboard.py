@@ -223,14 +223,21 @@ async def update_settings(request: Request, full_name: str = Form(...), phone: s
     return RedirectResponse(f"/{user['role']}_dashboard", status_code=303)
 
 import httpx
+from app.services.medicine_lookup import search_medicines_rxnorm
 
-@router.get("/api/medicines")
-async def search_medicines(q: str = ""):
+@router.get("/api/medicines/search")
+async def search_medicines_api(q: str = ""):
     if not q or len(q) < 2:
+        return []
+    return await search_medicines_rxnorm(q)
+
+@router.get("/api/medicines/detail")
+async def medicine_detail_api(name: str = ""):
+    if not name or len(name) < 2:
         return []
     try:
         async with httpx.AsyncClient() as client:
-            resp = await client.get(f"https://api.fda.gov/drug/label.json?search=openfda.brand_name:{q}*&limit=10")
+            resp = await client.get(f"https://api.fda.gov/drug/label.json?search=openfda.brand_name:{name}*&limit=10")
             if resp.status_code == 200:
                 data = resp.json()
                 results = []
