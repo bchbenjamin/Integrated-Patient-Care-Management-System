@@ -1,0 +1,22 @@
+{% macro ai_chat(user_name, default_message="Hello, how can I help you today?") %}
+<div class="chat-container">
+    <div style="padding: 16px; border-bottom: 1px solid var(--border-mist); background: var(--cream-paper);">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin:0;">AI Clinical Assistant</h3>
+            <label style="font-size:12px;"><input type="checkbox" id="voice-toggle"> Enable AI Voice</label>
+        </div>
+        <select id="voice-select" style="font-size:11px; padding:4px; border-radius:4px; max-width:150px; margin-top:8px; border:1px solid var(--border-mist);"></select>
+    </div>
+    
+    <div id="chat-messages" class="chat-messages">
+        <div class="chat-bubble assistant animate-in">
+            {{ default_message }}
+        </div>
+    </div>
+    
+    <div class="chat-input-bar">
+        <input type="text" id="chat-input" placeholder="Type your query..." onkeypress="if(event.key === 'Enter') sendMessage()" style="min-width: 0; flex-grow: 1;">
+        <button type="button" class="btn-primary" style="width:auto; margin:0;" onclick="sendMessage()">Send</button>
+    </div>
+</div>
+{% endmacro %}

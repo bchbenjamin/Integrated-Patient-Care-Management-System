@@ -1,4 +1,22 @@
 {% extends "base.html" %}
+{% import 'components/forms.html' as forms %}
+{% import 'components/card.html' as c %}
+{% import 'components/chat.html' as chat %}
+
+{% block extra_head %}
+<style>
+.flex-col-h-100 {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+.flex-grow {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="eyebrow">PHYSICIAN DASHBOARD</div>
@@ -6,15 +24,15 @@
 
 <div class="dashboard-grid">
     <!-- Left: Calendar (takes 2fr) -->
-    <div class="card-sage card-animate">
-        <h3>Your Appointments</h3>
-        <div id='calendar'></div>
+    <div class="flex-col-h-100">
+        {% call c.card(title='Your Appointments', style='sage') %}
+            <div id='calendar'></div>
+        {% endcall %}
     </div>
     
     <!-- Right: Profile + Prescriptions stacked -->
-    <div style="display:flex; flex-direction:column; gap:24px;">
-        <div class="card card-animate" style="animation-delay: 0.1s;">
-            <h3>Your Profile</h3>
+    <div style="display:flex; flex-direction:column; gap:24px; height: 100%;">
+        {% call c.card(title='Your Profile', style='default', delay='0.1s') %}
             <p><strong>Specialty:</strong> {{ doctor.specialty }}</p>
             <p><strong>Qualification:</strong> {{ doctor.qualification }}</p>
             <p><strong>Experience:</strong> {{ doctor.experience_years }} years</p>
@@ -23,17 +41,12 @@
             
             <h4>Availability</h4>
             <form method="POST" action="/update_availability">
-                <select name="availability" style="margin-bottom: 12px; width: 100%; padding: 8px;">
-                    <option value="available" {% if doctor.availability == 'available' %}selected{% endif %}>Available</option>
-                    <option value="busy" {% if doctor.availability == 'busy' %}selected{% endif %}>Busy</option>
-                    <option value="off_duty" {% if doctor.availability == 'off_duty' %}selected{% endif %}>Off Duty</option>
-                </select>
-                <button type="submit" class="btn-primary" style="margin-top:0;">Update Status</button>
+                {{ forms.select('availability', options=[{'value': 'available', 'label': 'Available'}, {'value': 'busy', 'label': 'Busy'}, {'value': 'off_duty', 'label': 'Off Duty'}], selected=doctor.availability) }}
+                {{ forms.button('Update Status', type='submit', style='primary', kwargs='style="margin-top:0;"') }}
             </form>
-        </div>
+        {% endcall %}
 
-        <div class="card-slate card-animate" style="animation-delay: 0.2s;">
-            <h3>Prescribed Medications</h3>
+        {% call c.card(title='Prescribed Medications', style='slate', delay='0.2s', class='flex-grow') %}
             {% if prescriptions %}
             <div class="table-responsive">
                 <table style="width:100%; border-collapse: collapse; text-align:left;">
@@ -60,19 +73,13 @@
             {% endif %}
             
             <div style="flex-grow: 1;"></div>
-            <button class="btn-primary" style="margin-top:16px;" onclick="document.getElementById('prescribe-modal').classList.add('active')">Prescribe New Medication</button>
-        </div>
+            {{ forms.button('Prescribe New Medication', type='button', style='primary', kwargs='style="margin-top:16px;" onclick="document.getElementById(\'prescribe-modal\').classList.add(\'active\')"') }}
+        {% endcall %}
     </div>
     
     <!-- Full-width: AI Assistant -->
-    <div class="full-width card-slate card-animate" style="animation-delay: 0.3s;">
-        <h3>Doctor AI Assistant</h3>
-        <p style="font-size:13px; color:#555;">I can help you prescribe medications, review schedules, and manage your day.</p>
-        <div id="chat-messages" class="chat-messages"></div>
-        <div class="chat-input-bar">
-            <input type="text" id="chat-input" placeholder="e.g. Prescribe 500mg Tylenol to John Doe..." onkeypress="if(event.key === 'Enter') sendMessage()">
-            <button class="btn-primary" style="width:auto; margin:0;" onclick="sendMessage()">Send</button>
-        </div>
+    <div class="full-width card-animate" style="animation-delay: 0.3s; margin-top: 24px;">
+        {{ chat.ai_chat('Dr. ' ~ user.full_name, default_message='Hello Dr. ' ~ user.full_name ~ ', I can help you prescribe medications, review schedules, and manage your day.') }}
     </div>
 </div>
 
@@ -84,7 +91,7 @@
             <button onclick="document.getElementById('prescribe-modal').classList.remove('active')" style="background:none; border:none; font-size:24px; cursor:pointer; color:var(--color-charcoal);">&times;</button>
         </div>
         <form method="POST" action="/api/prescribe" style="display:flex; flex-direction:column; gap:12px;">
-            <div>
+            <div class="form-group">
                 <label style="font-size:12px; font-weight:bold;">Patient</label>
                 <select name="patient_id" required style="width:100%; padding:6px;">
                     <option value="">-- Select Patient --</option>
@@ -93,26 +100,18 @@
                     {% endfor %}
                 </select>
             </div>
-            <div style="position:relative;">
+            <div style="position:relative;" class="form-group">
                 <label style="font-size:12px; font-weight:bold;">Medicine Name</label>
                 <input type="text" name="medicine_name" id="medicine_search" required style="width:100%; padding:6px;" placeholder="Type to search FDA database..." autocomplete="off">
                 <ul id="medicine_results" style="display:none; position:absolute; top:100%; left:0; right:0; background:white; border:1px solid #ccc; list-style:none; padding:0; margin:0; max-height:150px; overflow-y:auto; z-index:1001;"></ul>
             </div>
-            <div>
-                <label style="font-size:12px; font-weight:bold;">Dosage</label>
-                <input type="text" name="dosage" required style="width:100%; padding:6px;" placeholder="e.g. 500mg">
-            </div>
-            <div>
-                <label style="font-size:12px; font-weight:bold;">Frequency</label>
-                <input type="text" name="frequency" required style="width:100%; padding:6px;" placeholder="e.g. Twice a day after meals">
-            </div>
-            <div>
-                <label style="font-size:12px; font-weight:bold;">Duration (Days)</label>
-                <input type="number" name="duration_days" required style="width:100%; padding:6px;" placeholder="e.g. 5">
-            </div>
+            {{ forms.input('dosage', label='Dosage', required=True, placeholder='e.g. 500mg') }}
+            {{ forms.input('frequency', label='Frequency', required=True, placeholder='e.g. Twice a day after meals') }}
+            {{ forms.input('duration_days', label='Duration (Days)', type='number', required=True, placeholder='e.g. 5') }}
+            
             <div style="display:flex; gap:8px; margin-top:16px;">
-                <button type="submit" class="btn-primary" style="flex:1;">Prescribe</button>
-                <button type="button" class="btn-primary" style="flex:1; background:#ccc; color:#333;" onclick="document.getElementById('prescribe-modal').classList.remove('active')">Cancel</button>
+                {{ forms.button('Prescribe', type='submit', style='primary', kwargs='style="flex:1;"') }}
+                {{ forms.button('Cancel', type='button', style='primary', kwargs='style="flex:1; background:#ccc; color:#333;" onclick="document.getElementById(\'prescribe-modal\').classList.remove(\'active\')"') }}
             </div>
         </form>
     </div>

@@ -1,4 +1,6 @@
 {% extends "base.html" %}
+{% import 'components/forms.html' as forms %}
+{% import 'components/card.html' as c %}
 
 {% block extra_head %}
 <style>
@@ -31,7 +33,7 @@
         </div>
 
         <div id="login-tab" class="tab-content active">
-            <div class="form-card card-animate responsive-form-card">
+            {% call c.card(class='responsive-form-card') %}
                 <div style="text-align:center; margin-bottom: 24px;">
                     <div class="eyebrow">PORTAL ACCESS</div>
                     <h1 style="margin-top:0;">Ease Health</h1>
@@ -42,21 +44,15 @@
                 {% endif %}
 
                 <form method="POST" action="/login">
-                    <div class="form-group">
-                        <label>Email</label>
-                        <input type="email" name="email" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Password</label>
-                        <input type="password" name="password" required onkeypress="if(event.key === 'Enter') this.form.submit();">
-                    </div>
-                    <button type="submit" class="btn-primary">Sign In</button>
+                    {{ forms.input('email', label='Email', type='email', required=True) }}
+                    {{ forms.input('password', label='Password', type='password', required=True, kwargs='onkeypress="if(event.key === \'Enter\') this.form.submit();"') }}
+                    {{ forms.button('Sign In', type='submit', style='primary') }}
                 </form>
-            </div>
+            {% endcall %}
         </div>
 
         <div id="register-tab" class="tab-content">
-            <div class="form-card card-animate responsive-form-card" style="animation-delay: 0.1s;">
+            {% call c.card(delay='0.1s', class='responsive-form-card') %}
                 <div class="eyebrow">NEW PATIENT REGISTRATION</div>
                 <h2 style="margin-top:0;">Create Account</h2>
 
@@ -67,54 +63,21 @@
                 <form method="POST" action="/register">
                     <div class="form-grid">
                         <div class="flex-col">
-                            <div class="form-group">
-                                <label>Full Name *</label>
-                                <input type="text" name="full_name" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Email *</label>
-                                <input type="email" name="email" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Password *</label>
-                                <input type="password" name="password" required minlength="8" placeholder="Min 8 chars, 1 uppercase, 1 num, 1 special" onkeypress="if(event.key === 'Enter') this.form.submit();">
-                            </div>
-                            <div class="form-group">
-                                <label>Date of Birth</label>
-                                <input type="date" name="date_of_birth" value="2000-01-01">
-                            </div>
+                            {{ forms.input('full_name', label='Full Name *', required=True) }}
+                            {{ forms.input('email', label='Email *', type='email', required=True) }}
+                            {{ forms.input('password', label='Password *', type='password', required=True, placeholder='Min 8 chars, 1 uppercase, 1 num, 1 special', kwargs='minlength="8" onkeypress="if(event.key === \'Enter\') this.form.submit();"') }}
+                            {{ forms.input('date_of_birth', label='Date of Birth', type='date', value='2000-01-01') }}
                         </div>
                         <div class="flex-col">
-                            <div class="form-group">
-                                <label>Phone</label>
-                                <input type="text" name="phone">
-                            </div>
-                            <div class="form-group">
-                                <label>Gender</label>
-                                <select name="gender">
-                                    <option>Male</option>
-                                    <option>Female</option>
-                                    <option selected>Other</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Blood Group</label>
-                                <select name="blood_group">
-                                    <option>A+</option><option>A-</option>
-                                    <option>B+</option><option>B-</option>
-                                    <option>AB+</option><option>AB-</option>
-                                    <option selected>O+</option><option>O-</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Emergency Contact</label>
-                                <input type="text" name="emergency_contact">
-                            </div>
+                            {{ forms.input('phone', label='Phone') }}
+                            {{ forms.select('gender', label='Gender', options=['Male', 'Female', 'Other'], selected='Other') }}
+                            {{ forms.select('blood_group', label='Blood Group', options=['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'], selected='O+') }}
+                            {{ forms.input('emergency_contact', label='Emergency Contact') }}
                         </div>
                     </div>
-                    <button type="submit" class="btn-primary">Register</button>
+                    {{ forms.button('Register', type='submit', style='primary') }}
                 </form>
-            </div>
+            {% endcall %}
         </div>
     </div>
 </div>

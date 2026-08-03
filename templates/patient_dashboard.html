@@ -1,4 +1,7 @@
 {% extends "base.html" %}
+{% import 'components/forms.html' as forms %}
+{% import 'components/card.html' as c %}
+{% import 'components/chat.html' as chat %}
 
 {% block content %}
 <div class="eyebrow">PATIENT DASHBOARD</div>
@@ -7,8 +10,7 @@
 <div class="dashboard-grid">
     <!-- Left column: Medications + Calendar -->
     <div style="display:flex; flex-direction:column; gap:24px;">
-        <div class="card-slate card-animate">
-            <h3>My Medications</h3>
+        {% call c.card(title='My Medications', style='slate') %}
             {% if prescriptions %}
             <div style="display:flex; flex-direction:column; gap:12px;">
                 {% for p in prescriptions %}
@@ -24,7 +26,7 @@
                         {% else %}
                         <form method="POST" action="/api/medication/log" style="margin:0;">
                             <input type="hidden" name="prescription_id" value="{{ p.id }}">
-                            <button type="submit" class="btn-primary" style="margin:0; padding:6px 12px; font-size:12px;">Mark Taken</button>
+                            {{ forms.button('Mark Taken', type='submit', style='primary', kwargs='style="margin:0; padding:6px 12px; font-size:12px;"') }}
                         </form>
                         {% endif %}
                     </div>
@@ -34,22 +36,20 @@
             {% else %}
             <p style="color:#555;">You have no active prescriptions.</p>
             {% endif %}
-        </div>
+        {% endcall %}
         
-        <div class="card-sage card-animate" style="animation-delay: 0.1s;">
-            <h3>Your Upcoming Appointments</h3>
+        {% call c.card(title='Your Upcoming Appointments', style='sage', delay='0.1s') %}
             <div id='calendar'></div>
             <div style="display:flex; gap:12px; margin-top:16px; flex-wrap:wrap;">
-                <button class="btn-primary" style="flex:1; min-width:200px;" onclick="window.location.href='/book'">Book Appointment</button>
-                <button class="btn-primary" style="flex:1; min-width:200px; background:var(--color-mint-veil); color:var(--color-forest-ink);" onclick="document.getElementById('chat-input').focus(); document.getElementById('chat-input').value = 'I want to book an appointment'; sendMessage();">Book via AI</button>
+                {{ forms.button('Book Appointment', type='button', style='primary', kwargs='style="flex:1; min-width:200px;" onclick="window.location.href=\'/book\'"') }}
+                {{ forms.button('Book via AI', type='button', style='primary', kwargs='style="flex:1; min-width:200px; background:var(--color-mint-veil); color:var(--color-forest-ink);" onclick="document.getElementById(\'chat-input\').focus(); document.getElementById(\'chat-input\').value = \'I want to book an appointment\'; sendMessage();"') }}
             </div>
-        </div>
+        {% endcall %}
     </div>
     
     <!-- Right column: Profile + Prescriptions -->
     <div style="display:flex; flex-direction:column; gap:24px;">
-        <div class="card card-animate" style="animation-delay: 0.15s;">
-            <h3>Your Health Profile</h3>
+        {% call c.card(title='Your Health Profile', style='default', delay='0.15s') %}
             <p><strong>DOB:</strong> {{ patient.date_of_birth }}</p>
             <p><strong>Gender:</strong> {{ patient.gender }}</p>
             <p><strong>Blood Group:</strong> {{ patient.blood_group }}</p>
@@ -57,10 +57,9 @@
             <hr style="border: none; border-top: 1px solid var(--color-border-mist); margin: 16px 0;">
             <h4>Current Health Conditions</h4>
             <p style="font-size: 14px; color: #555;">{{ patient.health_condition or 'None recorded.' }}</p>
-        </div>
+        {% endcall %}
         
-        <div class="card-slate card-animate" style="animation-delay: 0.2s;">
-            <h3>My Prescriptions</h3>
+        {% call c.card(title='My Prescriptions', style='slate', delay='0.2s') %}
             <div class="table-responsive">
                 {% if prescriptions %}
                 <table style="width:100%; border-collapse: collapse; text-align:left;">
@@ -83,23 +82,12 @@
                 <p>No prescriptions yet.</p>
                 {% endif %}
             </div>
-        </div>
+        {% endcall %}
     </div>
     
     <!-- Full-width: AI Chat -->
-    <div class="full-width card-slate card-animate" style="animation-delay: 0.3s;">
-        <h3>AI Clinical Assistant</h3>
-        <div style="margin-bottom:8px;">
-            <label style="font-size:12px; margin-right:8px;"><input type="checkbox" id="voice-toggle"> Enable AI Voice</label>
-            <select id="voice-select" style="font-size:11px; padding:4px; border-radius:4px; max-width:150px;"></select>
-        </div>
-        <div id="chat-messages" class="chat-messages">
-            <div class="chat-bubble assistant">Hello {{ user.full_name }}, how can I help you today? I can help you find specialists, book appointments, or update your health records.</div>
-        </div>
-        <div class="chat-input-bar">
-            <input type="text" id="chat-input" placeholder="Type your query..." onkeypress="if(event.key === 'Enter') sendMessage()">
-            <button type="button" class="btn-primary" style="width:auto; margin:0;" onclick="sendMessage()">Send</button>
-        </div>
+    <div class="full-width card-animate" style="animation-delay: 0.3s; margin-top: 24px;">
+        {{ chat.ai_chat(user.full_name, default_message='Hello ' ~ user.full_name ~ ', how can I help you today? I can help you find specialists, book appointments, or update your health records.') }}
     </div>
 </div>
 {% endblock %}

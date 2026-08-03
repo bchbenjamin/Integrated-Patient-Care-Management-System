@@ -1,0 +1,9 @@
+{% macro card(title='', style='default', class='', delay='0s', inner_class='') %}
+{% set style_class = 'card' if style == 'default' else 'card-' ~ style %}
+<div class="{{ style_class }} card-animate {{ class }}" style="animation-delay: {{ delay }};">
+    {% if title %}<h3>{{ title }}</h3>{% endif %}
+    <div class="{{ inner_class }}">
+        {{ caller() }}
+    </div>
+</div>
+{% endmacro %}

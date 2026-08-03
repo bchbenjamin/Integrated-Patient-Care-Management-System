@@ -1,4 +1,6 @@
 {% extends "base.html" %}
+{% import 'components/forms.html' as forms %}
+{% import 'components/card.html' as c %}
 
 {% block title %}New Prescription - Ease Health{% endblock %}
 
@@ -57,10 +59,6 @@
         transform: translateY(-50%);
         box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     }
-    
-    .prescribe-card {
-        padding: 28px !important;
-    }
 }
 
 .autocomplete-item {
@@ -81,7 +79,7 @@
     <div class="eyebrow">PRESCRIBE MEDICATION</div>
     <h1 style="font-family: 'Cormorant Garamond', serif; font-weight: 300; color: #0f3e17;">New Prescription</h1>
     
-    <div class="card card-sage card-animate prescribe-card" style="padding: 28px 42px; border-radius: 14px;">
+    {% call c.card(style='sage') %}
         <form method="POST" action="/prescribe" id="prescribeForm">
             <div class="form-group">
                 <label>Patient</label>
@@ -99,10 +97,7 @@
                 <div id="autocompleteResults" class="autocomplete-results"></div>
             </div>
             
-            <div class="form-group">
-                <label>Dosage</label>
-                <input type="text" name="dosage" placeholder="e.g. 500mg" required>
-            </div>
+            {{ forms.input('dosage', label='Dosage', required=True, placeholder='e.g. 500mg') }}
             
             <div class="form-group">
                 <label>Schedule Type</label>
@@ -132,24 +127,13 @@
                 <input type="number" name="interval_hours" min="1" max="72">
             </div>
             
-            <div class="form-group">
-                <label>Frequency (Instructions)</label>
-                <input type="text" name="frequency" placeholder="e.g. Twice daily after meals" required>
-            </div>
+            {{ forms.input('frequency', label='Frequency (Instructions)', required=True, placeholder='e.g. Twice daily after meals') }}
+            {{ forms.input('duration_days', label='Duration (Days)', type='number', required=True, kwargs='min="1"') }}
+            {{ forms.textarea('notes', label='Notes (Optional)', kwargs='rows="3"') }}
             
-            <div class="form-group">
-                <label>Duration (Days)</label>
-                <input type="number" name="duration_days" min="1" required>
-            </div>
-            
-            <div class="form-group">
-                <label>Notes (Optional)</label>
-                <textarea name="notes" rows="3"></textarea>
-            </div>
-            
-            <button type="submit" class="btn btn-primary" style="background: #0f3e17; color: #fffefc; border-radius: 14px; border: none; padding: 12px 24px; cursor: pointer; font-family: 'Inter', sans-serif; width: 100%;">Generate Prescription</button>
+            {{ forms.button('Generate Prescription', type='submit', style='primary', kwargs='style="background: #0f3e17; color: #fffefc; border-radius: 14px; border: none; padding: 12px 24px; cursor: pointer; font-family: \'Inter\', sans-serif; width: 100%;"') }}
         </form>
-    </div>
+    {% endcall %}
 </div>
 {% endblock %}
 

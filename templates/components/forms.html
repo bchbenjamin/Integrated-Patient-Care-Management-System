@@ -1,0 +1,30 @@
+{% macro input(name, label='', type='text', required=False, value='', placeholder='', kwargs='') %}
+<div class="form-group">
+    {% if label %}<label for="{{ name }}">{{ label }}{% if required %} *{% endif %}</label>{% endif %}
+    <input type="{{ type }}" name="{{ name }}" id="{{ name }}" value="{{ value }}" placeholder="{{ placeholder }}" {% if required %}required{% endif %} {{ kwargs | safe }}>
+</div>
+{% endmacro %}
+
+{% macro select(name, label='', options=[], selected='', required=False, kwargs='') %}
+<div class="form-group">
+    {% if label %}<label for="{{ name }}">{{ label }}{% if required %} *{% endif %}</label>{% endif %}
+    <select name="{{ name }}" id="{{ name }}" {% if required %}required{% endif %} {{ kwargs | safe }}>
+        {% for opt in options %}
+        <option value="{{ opt.value if opt.value is defined else opt }}" {% if selected == (opt.value if opt.value is defined else opt) %}selected{% endif %}>
+            {{ opt.label if opt.label is defined else opt }}
+        </option>
+        {% endfor %}
+    </select>
+</div>
+{% endmacro %}
+
+{% macro textarea(name, label='', required=False, value='', placeholder='', kwargs='') %}
+<div class="form-group">
+    {% if label %}<label for="{{ name }}">{{ label }}{% if required %} *{% endif %}</label>{% endif %}
+    <textarea name="{{ name }}" id="{{ name }}" placeholder="{{ placeholder }}" {% if required %}required{% endif %} {{ kwargs | safe }}>{{ value }}</textarea>
+</div>
+{% endmacro %}
+
+{% macro button(text, type='submit', style='primary', class='', kwargs='', onclick='') %}
+<button type="{{ type }}" class="btn-{{ style }} {{ class }}" {% if onclick %}onclick="{{ onclick }}"{% endif %} {{ kwargs | safe }}>{{ text }}</button>
+{% endmacro %}

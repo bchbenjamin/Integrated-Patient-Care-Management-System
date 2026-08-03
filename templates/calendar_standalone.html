@@ -1,49 +1,50 @@
 {% extends "base.html" %}
+{% import 'components/forms.html' as forms %}
+{% import 'components/card.html' as c %}
 
 {% block content %}
-<div class="card-sage card-animate" style="max-width: 900px; margin: 0 auto; min-height: 80vh; position: relative;">
-    <h2 style="margin-bottom: 24px;">Full Schedule</h2>
-    <div id="standalone-calendar"></div>
+<div style="max-width: 900px; margin: 0 auto; min-height: 80vh; position: relative;">
+    {% call c.card(title='Full Schedule', style='sage') %}
+        <div id="standalone-calendar"></div>
 
-    <!-- Booking Modal (Hidden by default) -->
-    <div id="booking-modal" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:white; padding:24px; border-radius:14px; box-shadow:0 4px 12px rgba(0,0,0,0.15); z-index:100; width:90%; max-width: 350px;">
-        <h3 style="margin-top:0;">Book Appointment</h3>
-        <form method="POST" action="/book" style="display:flex; flex-direction:column; gap:12px;">
-            <div style="display:flex; gap:8px; margin-bottom:8px;">
-                <div class="form-group" style="flex:1;">
-                    <label style="display:block; font-size:12px; font-weight:bold;">Date</label>
-                    <input type="date" name="date" id="modal-date" required style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px;">
+        <!-- Booking Modal (Hidden by default) -->
+        <div id="booking-modal" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:white; padding:24px; border-radius:14px; box-shadow:0 4px 12px rgba(0,0,0,0.15); z-index:100; width:90%; max-width: 350px;">
+            <h3 style="margin-top:0;">Book Appointment</h3>
+            <form method="POST" action="/book" style="display:flex; flex-direction:column; gap:12px;">
+                <div style="display:flex; gap:8px; margin-bottom:8px;">
+                    <div class="form-group" style="flex:1;">
+                        <label style="display:block; font-size:12px; font-weight:bold;">Date</label>
+                        <input type="date" name="date" id="modal-date" required style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px;">
+                    </div>
+                    <div class="form-group" style="flex:1;">
+                        <label style="display:block; font-size:12px; font-weight:bold;">Time</label>
+                        <input type="time" name="time" id="modal-time" required style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px;">
+                    </div>
                 </div>
-                <div class="form-group" style="flex:1;">
-                    <label style="display:block; font-size:12px; font-weight:bold;">Time</label>
-                    <input type="time" name="time" id="modal-time" required style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px;">
+                
+                {% if user.role == 'patient' %}
+                <div class="form-group">
+                    <label style="display:block; font-size:12px; font-weight:bold;">Doctor</label>
+                    <select name="doctor_id" required style="width:100%; padding:6px;">
+                        <option value="">-- Choose a Specialist --</option>
+                        {% for doc in doctors %}
+                        <option value="{{ doc.id }}">{{ doc.full_name }} ({{ doc.specialty }})</option>
+                        {% endfor %}
+                    </select>
                 </div>
-            </div>
-            
-            {% if user.role == 'patient' %}
-            <div class="form-group">
-                <label style="display:block; font-size:12px; font-weight:bold;">Doctor</label>
-                <select name="doctor_id" required style="width:100%; padding:6px;">
-                    <option value="">-- Choose a Specialist --</option>
-                    {% for doc in doctors %}
-                    <option value="{{ doc.id }}">{{ doc.full_name }} ({{ doc.specialty }})</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-group">
-                <label style="display:block; font-size:12px; font-weight:bold;">Reason</label>
-                <textarea name="reason" rows="2" required style="width:100%; padding:6px;"></textarea>
-            </div>
-            <div style="display:flex; gap:8px; margin-top:8px;">
-                <button type="submit" class="btn-primary" style="flex:1;">Book Now</button>
-                <button type="button" class="btn-primary" style="flex:1; background:#ccc; color:#333;" onclick="document.getElementById('booking-modal').style.display='none'">Cancel</button>
-            </div>
-            {% else %}
-            <p style="font-size:13px;">Doctors cannot book appointments for themselves here.</p>
-            <button type="button" class="btn-primary" style="background:#ccc; color:#333;" onclick="document.getElementById('booking-modal').style.display='none'">Close</button>
-            {% endif %}
-        </form>
-    </div>
+                {{ forms.textarea('reason', label='Reason', required=True, kwargs='rows="2" style="width:100%; padding:6px;"') }}
+                
+                <div style="display:flex; gap:8px; margin-top:8px;">
+                    {{ forms.button('Book Now', type='submit', style='primary', kwargs='style="flex:1;"') }}
+                    {{ forms.button('Cancel', type='button', style='primary', kwargs='style="flex:1; background:#ccc; color:#333;" onclick="document.getElementById(\'booking-modal\').style.display=\'none\'"') }}
+                </div>
+                {% else %}
+                <p style="font-size:13px;">Doctors cannot book appointments for themselves here.</p>
+                {{ forms.button('Close', type='button', style='primary', kwargs='style="background:#ccc; color:#333;" onclick="document.getElementById(\'booking-modal\').style.display=\'none\'"') }}
+                {% endif %}
+            </form>
+        </div>
+    {% endcall %}
 </div>
 {% endblock %}
 
