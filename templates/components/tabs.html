@@ -1,0 +1,13 @@
+{% macro tab_nav(tabs, active=0) %}
+<div class="tabs" id="tab-nav">
+    {% for tab in tabs %}
+    <div class="tab{% if loop.index0 == active %} active{% endif %}" onclick="switchTab('{{ tab.id }}', this)" data-target="{{ tab.id }}">{{ tab.label }}</div>
+    {% endfor %}
+</div>
+{% endmacro %}
+
+{% macro tab_panel(id, active=false) %}
+<div id="{{ id }}" class="tab-content{% if active %} active{% endif %}">
+    {{ caller() }}
+</div>
+{% endmacro %}

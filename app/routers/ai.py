@@ -1,11 +1,11 @@
 import os
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request, HTTPException, UploadFile, File
 from pydantic import BaseModel
 from langchain_groq import ChatGroq
 from langchain_core.tools import tool
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from app.core.db import fetch_all, fetch_one, execute_query
-
+from app.services.ocr_service import process_uploaded_file
 router = APIRouter()
 
 # --- AI Tool Classes ---
@@ -249,3 +249,32 @@ CRITICAL RULES:
             messages.append(ToolMessage(content=tool_res, tool_call_id=tool_call["id"]))
 
     return {"reply": "Error processing request.", "reload": False}
+
+@router.post("/ocr")
+async def ocr_endpoint(request: Request, file: UploadFile = File(...)):
+    user = request.session.get("user")
+    if not user:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+        
+    file_bytes = await file.read()
+    extracted_text = process_uploaded_file(file_bytes, file.filename, file.content_type)
+    
+    if not extracted_text or extracted_text.startswith("OCR Error") or extracted_text.startswith("PDF Extraction Error"):
+        return {"extracted_text": "", "reply": "I couldn't read the text from that file. Please make sure it's a clear image or PDF."}
+        
+    sys_msg = SystemMessage(content="""
+You are an AI assistant helping a user understand a medical document (like a prescription or lab report).
+You will be provided with the raw OCR text extracted from their uploaded document.
+Provide a short, helpful summary of the key information (e.g., patient name, doctor, medicines, dosage).
+Keep it conversational, empathetic, and clear. Remind them to consult their doctor for medical advice.
+""")
+    
+    messages = [sys_msg, HumanMessage(content=f"Here is the text extracted from my document:\n\n{extracted_text}")]
+    
+    try:
+        ai_msg = llm.invoke(messages)
+        reply = ai_msg.content
+    except Exception as e:
+        reply = "I successfully extracted the text, but ran into an error generating a summary."
+        
+    return {"extracted_text": extracted_text, "reply": reply}

@@ -1,0 +1,15 @@
+{% macro modal(id, title='') %}
+<div class="modal-overlay" id="{{ id }}">
+    <div class="modal-content">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            {% if title %}<h3 style="margin:0;">{{ title }}</h3>{% endif %}
+            <button onclick="document.getElementById('{{ id }}').classList.remove('active')" style="background:none; border:none; font-size:24px; cursor:pointer; color:var(--charcoal); width:auto; margin:0; padding:4px;">&times;</button>
+        </div>
+        {{ caller() }}
+    </div>
+</div>
+{% endmacro %}
+
+{% macro open_modal(id) %}
+onclick="document.getElementById('{{ id }}').classList.add('active')"
+{% endmacro %}

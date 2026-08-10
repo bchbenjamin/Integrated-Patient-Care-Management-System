@@ -1,0 +1,28 @@
+{% macro medicine_card(name, dosage, frequency='', duration='', doctor_name='', cost='', image_url='', prescription_id=None, taken_today=false, show_actions=true) %}
+<div class="medicine-card">
+    {% if image_url %}
+    <img src="{{ image_url }}" alt="{{ name }}" class="medicine-card-image" onerror="this.src='data:image/svg+xml,<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; viewBox=&quot;0 0 64 64&quot; fill=&quot;%230f3e17&quot;><text x=&quot;50%&quot; y=&quot;55%&quot; dominant-baseline=&quot;middle&quot; text-anchor=&quot;middle&quot; font-size=&quot;32&quot;>💊</text></svg>'">
+    {% else %}
+    <div class="medicine-card-image" style="display:flex; align-items:center; justify-content:center; font-size:28px;">💊</div>
+    {% endif %}
+    <div class="medicine-card-info">
+        <h4>{{ name }}</h4>
+        <p>{{ dosage }}{% if frequency %} — {{ frequency }}{% endif %}</p>
+        {% if doctor_name %}<p style="font-size:12px; opacity:0.6;">Prescribed by {{ doctor_name }}{% if duration %} ({{ duration }} days){% endif %}</p>{% endif %}
+        {% if cost %}<div class="medicine-cost">${{ cost }}</div>{% endif %}
+    </div>
+    {% if show_actions and prescription_id %}
+    <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
+        {% if taken_today %}
+        <span class="badge badge-success">✔ Taken</span>
+        {% else %}
+        <form method="POST" action="/api/medication/log" style="margin:0;">
+            <input type="hidden" name="prescription_id" value="{{ prescription_id }}">
+            <button type="submit" class="btn-primary" style="margin:0; padding:6px 12px; font-size:12px; width:auto;">Mark Taken</button>
+        </form>
+        {% endif %}
+        <a href="/prescriptions/{{ prescription_id }}/download" target="_blank" class="btn-download" style="font-size:12px;">📄 PDF</a>
+    </div>
+    {% endif %}
+</div>
+{% endmacro %}

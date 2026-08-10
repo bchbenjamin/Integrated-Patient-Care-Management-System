@@ -2,6 +2,9 @@
 {% import 'components/forms.html' as forms %}
 {% import 'components/card.html' as c %}
 {% import 'components/chat.html' as chat %}
+{% import 'components/stat_card.html' as stat %}
+{% import 'components/health_metrics.html' as health %}
+{% import 'components/medicine_card.html' as med %}
 
 {% block extra_head %}
 <style>
@@ -19,8 +22,14 @@
 {% endblock %}
 
 {% block content %}
-<div class="eyebrow">PHYSICIAN DASHBOARD</div>
+<div class="eyebrow">CLINICAL OVERVIEW</div>
 <h2>Welcome, Dr. {{ user.full_name }}</h2>
+
+<div class="flex-row" style="gap:24px; margin-bottom: 24px;">
+    {{ stat.stat_card('Experience', doctor.experience_years ~ ' years') }}
+    {{ stat.stat_card('Specialty', doctor.specialty, delay='0.1s') }}
+    {{ stat.stat_card('Status', doctor.availability|capitalize, delay='0.2s') }}
+</div>
 
 <div class="dashboard-grid">
     <!-- Left: Calendar (takes 2fr) -->
@@ -31,11 +40,9 @@
     </div>
     
     <!-- Right: Profile + Prescriptions stacked -->
-    <div style="display:flex; flex-direction:column; gap:24px; height: 100%;">
+    <div class="flex-col" style="gap:24px; height: 100%;">
         {% call c.card(title='Your Profile', style='default', delay='0.1s') %}
-            <p><strong>Specialty:</strong> {{ doctor.specialty }}</p>
             <p><strong>Qualification:</strong> {{ doctor.qualification }}</p>
-            <p><strong>Experience:</strong> {{ doctor.experience_years }} years</p>
             
             <hr style="border: none; border-top: 1px solid var(--color-border-mist); margin: 16px 0;">
             
@@ -79,18 +86,18 @@
     
     <!-- Full-width: AI Assistant -->
     <div class="full-width card-animate" style="animation-delay: 0.3s; margin-top: 24px;">
-        {{ chat.ai_chat('Dr. ' ~ user.full_name, default_message='Hello Dr. ' ~ user.full_name ~ ', I can help you prescribe medications, review schedules, and manage your day.') }}
+        {{ chat.ai_chat('Dr. ' ~ user.full_name, default_message="Doctor mode active. How can I assist with your patients today?") }}
     </div>
 </div>
 
 <!-- Prescribe Modal -->
 <div class="modal-overlay" id="prescribe-modal">
     <div class="modal-content">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <div class="flex-row" style="justify-content:space-between; align-items:center; margin-bottom:16px;">
             <h3 style="margin:0;">Prescribe Medication</h3>
             <button onclick="document.getElementById('prescribe-modal').classList.remove('active')" style="background:none; border:none; font-size:24px; cursor:pointer; color:var(--color-charcoal);">&times;</button>
         </div>
-        <form method="POST" action="/api/prescribe" style="display:flex; flex-direction:column; gap:12px;">
+        <form method="POST" action="/api/prescribe" class="flex-col" style="gap:12px;">
             <div class="form-group">
                 <label style="font-size:12px; font-weight:bold;">Patient</label>
                 <select name="patient_id" required style="width:100%; padding:6px;">
@@ -109,9 +116,9 @@
             {{ forms.input('frequency', label='Frequency', required=True, placeholder='e.g. Twice a day after meals') }}
             {{ forms.input('duration_days', label='Duration (Days)', type='number', required=True, placeholder='e.g. 5') }}
             
-            <div style="display:flex; gap:8px; margin-top:16px;">
-                {{ forms.button('Prescribe', type='submit', style='primary', kwargs='style="flex:1;"') }}
-                {{ forms.button('Cancel', type='button', style='primary', kwargs='style="flex:1; background:#ccc; color:#333;" onclick="document.getElementById(\'prescribe-modal\').classList.remove(\'active\')"') }}
+            <div class="flex-row" style="gap:8px; margin-top:16px;">
+                {{ forms.button('Prescribe', type='submit', style='primary', class='flex-1') }}
+                {{ forms.button('Cancel', type='button', style='primary', class='flex-1', kwargs='style="background:#ccc; color:#333;" onclick="document.getElementById(\'prescribe-modal\').classList.remove(\'active\')"') }}
             </div>
         </form>
     </div>
@@ -195,122 +202,10 @@
             }
         });
         calendar.render();
+
+        if(typeof EaseChat !== 'undefined') {
+            EaseChat.init({ endpoint: '/doctor_chat', role: 'doctor' });
+        }
     });
-
-    // Chat functionality
-    function addMessage(text, isUser) {
-        const bubble = document.createElement('div');
-        bubble.className = 'chat-bubble ' + (isUser ? 'user' : 'assistant') + ' animate-in';
-        
-        // Render markdown (bold)
-        let html = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-        html = html.replace(/\n/g, '<br>');
-        bubble.innerHTML = html;
-        
-        const container = document.getElementById('chat-messages');
-        container.appendChild(bubble);
-        container.scrollTop = container.scrollHeight;
-        
-        // Remove animation class after it plays
-        bubble.addEventListener('animationend', () => bubble.classList.remove('animate-in'));
-    }
-
-    function showTyping() {
-        const typing = document.createElement('div');
-        typing.id = 'typing-indicator';
-        typing.className = 'chat-bubble assistant animate-in';
-        typing.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
-        document.getElementById('chat-messages').appendChild(typing);
-        document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
-    }
-
-    function sendMessage() {
-        const input = document.getElementById('chat-input');
-        const text = input.value.trim();
-        if(!text) return;
-
-        addMessage(text, true);
-        input.value = '';
-
-        showTyping();
-
-        fetch('/doctor_chat', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({query: text})
-        })
-        .then(res => res.json())
-        .then(data => {
-            const typing = document.getElementById('typing-indicator');
-            if (typing) typing.remove();
-            
-            let replyText = data.reply;
-            let actionHtml = '';
-            
-            if (replyText.includes('**ACTION_REQUIRED**')) {
-                const parts = replyText.split('**ACTION_REQUIRED**');
-                replyText = parts[0];
-                
-                try {
-                    const jsonMatch = parts[1].match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-                    let jsonStr = '';
-                    if (jsonMatch && jsonMatch[1]) {
-                        jsonStr = jsonMatch[1].trim();
-                    } else {
-                        jsonStr = parts[1].trim();
-                    }
-                    
-                    const payload = JSON.parse(jsonStr);
-                    if (payload.action === 'confirm_prescription') {
-                        const isInterval = payload.schedule_type === 'interval';
-                        actionHtml = `
-                        <div style="background:#fff; border:1px solid #ccc; border-radius:14px; padding:16px; margin-top:8px;">
-                            <h4 style="margin:0 0 12px 0;">Confirm Prescription</h4>
-                            <form method="POST" action="/prescribe" style="display:flex; flex-direction:column; gap:8px;">
-                                <input type="hidden" name="patient_id" value="${payload.patient_id}">
-                                <div><strong>Patient:</strong> ${payload.patient_name}</div>
-                                <div><strong>Medicine:</strong> <input type="text" name="medicine_name" value="${payload.medicine_name}" required style="padding:4px; width:100%; box-sizing:border-box;"></div>
-                                <div><strong>Dosage:</strong> <input type="text" name="dosage" value="${payload.dosage}" required style="padding:4px; width:100%; box-sizing:border-box;"></div>
-                                <div><strong>Frequency:</strong> <input type="text" name="frequency" value="${payload.frequency}" required style="padding:4px; width:100%; box-sizing:border-box;"></div>
-                                <div><strong>Duration (Days):</strong> <input type="number" name="duration_days" value="${payload.duration_days}" required style="padding:4px; width:100%; box-sizing:border-box;"></div>
-                                <div><strong>Schedule:</strong>
-                                    <select name="schedule_type" style="padding:4px;">
-                                        <option value="fixed_times" ${!isInterval ? 'selected' : ''}>Fixed times per day</option>
-                                        <option value="interval" ${isInterval ? 'selected' : ''}>Every N hours</option>
-                                    </select>
-                                </div>
-                                <div><strong>Dose Times:</strong> <input type="text" name="dose_times" value="${payload.dose_times || '08:00,20:00'}" style="padding:4px; width:100%; box-sizing:border-box;" placeholder="e.g. 08:00,14:00,20:00"></div>
-                                <div><strong>Interval (hrs):</strong> <input type="number" name="interval_hours" value="${payload.interval_hours || 0}" style="padding:4px; width:100%; box-sizing:border-box;"></div>
-                                <div><strong>Notes:</strong> <textarea name="notes" style="padding:4px; width:100%; box-sizing:border-box;" rows="2">${payload.notes || ''}</textarea></div>
-                                <button type="submit" class="btn-primary" style="margin-top:8px;">Confirm & Prescribe</button>
-                            </form>
-                        </div>
-                        `;
-                    }
-                } catch(e) {
-                    console.error("Failed to parse action payload", e);
-                    actionHtml = `<div style="color:red; font-size:12px;">Error rendering confirmation form. Please try again.</div>`;
-                }
-            }
-
-            addMessage(replyText + actionHtml, false);
-            
-            // Speak the reply
-            if ('speechSynthesis' in window) {
-                const utterance = new SpeechSynthesisUtterance(replyText.replace(/\*\*(.*?)\*\*/g, '$1'));
-                window.speechSynthesis.speak(utterance);
-            }
-
-            if(data.reload && !actionHtml) {
-                setTimeout(() => window.location.reload(), 2000);
-            }
-        })
-        .catch(err => {
-            const typing = document.getElementById('typing-indicator');
-            if (typing) typing.remove();
-            addMessage("Error connecting to AI.", false);
-            console.error(err);
-        });
-    }
 </script>
 {% endblock %}

@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from app.core.db import fetch_one, fetch_all, execute_query
+import app.services.google_health as gh
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -41,13 +42,23 @@ async def patient_dashboard_page(request: Request):
             
     json_appointments = json.dumps(appointments, default=date_handler)
     
+    # Integrations
+    gh_token_row = fetch_one("SELECT access_token FROM user_integrations WHERE user_id = %s AND provider = 'google_health'", (user['id'],))
+    health_metrics = {}
+    if gh_token_row:
+        health_metrics = await gh.get_health_summary(gh_token_row['access_token'])
+        
+    recent_activities = {}
+    
     return templates.TemplateResponse(request=request, name="patient_dashboard.html", context={
         "request": request, 
         "user": user,
         "patient": patient,
         "appointments": appointments,
         "json_appointments": json_appointments,
-        "prescriptions": prescriptions
+        "prescriptions": prescriptions,
+        "health_metrics": health_metrics,
+        "recent_activities": recent_activities
     })
 
 @router.get("/doctor_dashboard", response_class=HTMLResponse)
@@ -209,7 +220,15 @@ async def settings_page(request: Request):
     user = request.session.get("user")
     if not user:
         return RedirectResponse("/login")
-    return templates.TemplateResponse(request=request, name="settings.html", context={"request": request, "user": user})
+        
+    user_integrations = fetch_all("SELECT provider FROM user_integrations WHERE user_id = %s", (user['id'],))
+    active_integrations = {row['provider']: True for row in user_integrations}
+    integrations = {
+        "google_calendar": active_integrations.get("google_calendar", False),
+        "google_health": active_integrations.get("google_health", False),
+    }
+        
+    return templates.TemplateResponse(request=request, name="settings.html", context={"request": request, "user": user, "integrations": integrations})
 
 @router.post("/settings")
 async def update_settings(request: Request, full_name: str = Form(...), phone: str = Form(None)):

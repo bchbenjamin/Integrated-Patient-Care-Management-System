@@ -1,60 +1,145 @@
 {% extends "base.html" %}
 {% import 'components/forms.html' as forms %}
 {% import 'components/card.html' as c %}
+{% import 'components/tabs.html' as tabs %}
 
 {% block extra_head %}
 <style>
+.login-container {
+    max-width: 520px;
+    margin: 60px auto;
+    width: 100%;
+}
+.brand-header {
+    text-align: center;
+    margin-bottom: 40px;
+    animation: fadeSlideUp 0.5s ease-out forwards;
+}
+.brand-logo {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 16px;
+    color: var(--forest-ink);
+}
 .form-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 0 24px;
+    gap: 0 16px;
 }
 .responsive-form-card {
-    padding: 56px;
+    padding: 40px;
+    box-sizing: border-box;
+}
+.tab-nav-wrapper {
+    margin-bottom: 32px;
+    animation: fadeSlideUp 0.5s ease-out 0.1s forwards;
+    opacity: 0;
+}
+.tab-content-wrapper {
+    animation: fadeSlideUp 0.5s ease-out 0.2s forwards;
+    opacity: 0;
 }
 @media (max-width: 768px) {
     .form-grid {
         grid-template-columns: 1fr;
     }
     .responsive-form-card {
-        padding: 28px;
+        padding: 24px;
     }
+    .login-container {
+        margin: 30px auto;
+        padding: 0 16px;
+    }
+}
+.divider-text {
+    text-align: center;
+    margin: 24px 0;
+    color: var(--charcoal);
+    font-size: 14px;
+    position: relative;
+}
+.divider-text::before, .divider-text::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 40%;
+    height: 1px;
+    background: var(--border-mist);
+}
+.divider-text::before { left: 0; }
+.divider-text::after { right: 0; }
+.btn-google {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border-mist);
+    border-radius: 14px;
+    background: var(--cream-paper);
+    color: var(--charcoal);
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.2s;
+    box-sizing: border-box;
+}
+.btn-google:hover {
+    background: var(--keylime-wash);
 }
 </style>
 {% endblock %}
 
 {% block content %}
-<div style="max-width:600px; margin:0 auto;">
-    
-    <div style="flex: 1;">
-        <div class="tabs">
-            <div class="tab active" onclick="switchTab('login')">Sign In</div>
-            <div class="tab" onclick="switchTab('register')">Register (Patient)</div>
-        </div>
+<div class="login-container">
+    <div class="brand-header">
+        <svg class="brand-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"></path>
+            <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"></path>
+        </svg>
+        <h1 style="margin:0;">Ease Health</h1>
+        <p style="margin-top: 8px; color: var(--charcoal); font-weight: 300;">Integrated Patient Care Portal</p>
+    </div>
 
-        <div id="login-tab" class="tab-content active">
+    <div class="tab-nav-wrapper">
+        {{ tabs.tab_nav([
+            {'id': 'login', 'label': 'Sign In'},
+            {'id': 'register', 'label': 'Register (Patient)'}
+        ], active=(1 if reg_error else 0)) }}
+    </div>
+
+    <div class="tab-content-wrapper">
+        {% call tabs.tab_panel('login', active=(not reg_error)) %}
             {% call c.card(class='responsive-form-card') %}
-                <div style="text-align:center; margin-bottom: 24px;">
-                    <div class="eyebrow">PORTAL ACCESS</div>
-                    <h1 style="margin-top:0;">Ease Health</h1>
+                <div style="margin-bottom: 32px; text-align: center;">
+                    <span class="eyebrow">Welcome Back</span>
+                    <h2 style="margin: 0; font-size: 28px;">Sign in to your account</h2>
                 </div>
-
+                
                 {% if error %}
                 <div class="alert alert-error">{{ error }}</div>
                 {% endif %}
 
                 <form method="POST" action="/login">
-                    {{ forms.input('email', label='Email', type='email', required=True) }}
+                    {{ forms.input('email', label='Email Address', type='email', required=True) }}
                     {{ forms.input('password', label='Password', type='password', required=True, kwargs='onkeypress="if(event.key === \'Enter\') this.form.submit();"') }}
-                    {{ forms.button('Sign In', type='submit', style='primary') }}
+                    {{ forms.button('Sign In', type='submit', style='primary', kwargs='style="margin-top: 24px;"') }}
                 </form>
+                
+                <div class="divider-text">or</div>
+                <a href="/auth/google/patient-login" class="btn-google">
+                    <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+                    Sign in with Google
+                </a>
             {% endcall %}
-        </div>
+        {% endcall %}
 
-        <div id="register-tab" class="tab-content">
-            {% call c.card(delay='0.1s', class='responsive-form-card') %}
-                <div class="eyebrow">NEW PATIENT REGISTRATION</div>
-                <h2 style="margin-top:0;">Create Account</h2>
+        {% call tabs.tab_panel('register', active=(true if reg_error else false)) %}
+            {% call c.card(class='responsive-form-card') %}
+                <div style="margin-bottom: 32px; text-align: center;">
+                    <span class="eyebrow">New Patient Registration</span>
+                    <h2 style="margin: 0; font-size: 28px;">Create an account</h2>
+                </div>
 
                 {% if reg_error %}
                 <div class="alert alert-error">{{ reg_error }}</div>
@@ -62,39 +147,48 @@
 
                 <form method="POST" action="/register">
                     <div class="form-grid">
-                        <div class="flex-col">
+                        <div class="flex-col" style="gap: 0;">
                             {{ forms.input('full_name', label='Full Name *', required=True) }}
                             {{ forms.input('email', label='Email *', type='email', required=True) }}
                             {{ forms.input('password', label='Password *', type='password', required=True, placeholder='Min 8 chars, 1 uppercase, 1 num, 1 special', kwargs='minlength="8" onkeypress="if(event.key === \'Enter\') this.form.submit();"') }}
                             {{ forms.input('date_of_birth', label='Date of Birth', type='date', value='2000-01-01') }}
                         </div>
-                        <div class="flex-col">
+                        <div class="flex-col" style="gap: 0;">
                             {{ forms.input('phone', label='Phone') }}
                             {{ forms.select('gender', label='Gender', options=['Male', 'Female', 'Other'], selected='Other') }}
                             {{ forms.select('blood_group', label='Blood Group', options=['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'], selected='O+') }}
                             {{ forms.input('emergency_contact', label='Emergency Contact') }}
                         </div>
                     </div>
-                    {{ forms.button('Register', type='submit', style='primary') }}
+                    {{ forms.button('Register', type='submit', style='primary', kwargs='style="margin-top: 24px;"') }}
                 </form>
+                
+                <div class="divider-text">or</div>
+                <a href="/auth/google/patient-login" class="btn-google">
+                    <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+                    Register with Google
+                </a>
             {% endcall %}
-        </div>
+        {% endcall %}
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    function switchTab(tabId) {
+    function switchTab(tabId, element) {
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-        
-        if (tabId === 'login') {
-            document.querySelectorAll('.tab')[0].classList.add('active');
-            document.getElementById('login-tab').classList.add('active');
+        if (element) {
+            element.classList.add('active');
         } else {
-            document.querySelectorAll('.tab')[1].classList.add('active');
-            document.getElementById('register-tab').classList.add('active');
+            const targetTab = document.querySelector(`.tab[data-target="${tabId}"]`);
+            if(targetTab) targetTab.classList.add('active');
+        }
+
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        const targetContent = document.getElementById(tabId);
+        if (targetContent) {
+            targetContent.classList.add('active');
         }
     }
 </script>

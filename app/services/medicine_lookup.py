@@ -46,3 +46,10 @@ async def search_medicines_rxnorm(query: str) -> List[str]:
         pass
         
     return []
+
+
+async def get_medicine_full_details(name: str) -> dict:
+    """Get comprehensive medicine details including cost and image.
+    Delegates to medicine_details service."""
+    from app.services.medicine_details import get_medicine_details
+    return await get_medicine_details(name)

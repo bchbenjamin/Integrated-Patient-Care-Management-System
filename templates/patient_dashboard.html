@@ -2,35 +2,33 @@
 {% import 'components/forms.html' as forms %}
 {% import 'components/card.html' as c %}
 {% import 'components/chat.html' as chat %}
+{% import 'components/stat_card.html' as stat %}
+{% import 'components/health_metrics.html' as health %}
+{% import 'components/medicine_card.html' as med %}
 
 {% block content %}
-<div class="eyebrow">PATIENT DASHBOARD</div>
+<div class="eyebrow">YOUR HEALTH OVERVIEW</div>
 <h2>Welcome, {{ user.full_name }}</h2>
 
 <div class="dashboard-grid">
     <!-- Left column: Medications + Calendar -->
-    <div style="display:flex; flex-direction:column; gap:24px;">
+    <div class="flex-col" style="gap:24px;">
+        {{ health.metrics_display(health_metrics) }}
+        {{ health.activity_feed(recent_activities) }}
+
         {% call c.card(title='My Medications', style='slate') %}
             {% if prescriptions %}
-            <div style="display:flex; flex-direction:column; gap:12px;">
+            <div class="flex-col" style="gap:12px;">
                 {% for p in prescriptions %}
-                <div style="padding:16px; border:1px solid var(--color-border-mist); border-radius:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-                    <div>
-                        <h4 style="margin:0 0 4px 0;">{{ p.medicine_name }}</h4>
-                        <p style="margin:0; font-size:14px; color:#555;">{{ p.dosage }} — {{ p.frequency }}</p>
-                        <p style="margin:4px 0 0 0; font-size:12px; color:#888;">Prescribed by {{ p.doctor_name }} ({{ p.duration_days }} days)</p>
-                    </div>
-                    <div>
-                        {% if p.taken_today > 0 %}
-                        <span style="color:var(--color-forest-ink); font-weight:bold; font-size:14px;">✔ Taken Today</span>
-                        {% else %}
-                        <form method="POST" action="/api/medication/log" style="margin:0;">
-                            <input type="hidden" name="prescription_id" value="{{ p.id }}">
-                            {{ forms.button('Mark Taken', type='submit', style='primary', kwargs='style="margin:0; padding:6px 12px; font-size:12px;"') }}
-                        </form>
-                        {% endif %}
-                    </div>
-                </div>
+                    {{ med.medicine_card(
+                        name=p.medicine_name,
+                        dosage=p.dosage,
+                        frequency=p.frequency,
+                        duration=p.duration_days,
+                        doctor_name=p.doctor_name,
+                        prescription_id=p.id,
+                        taken_today=(p.taken_today > 0 if p.taken_today is defined else false)
+                    ) }}
                 {% endfor %}
             </div>
             {% else %}
@@ -40,15 +38,15 @@
         
         {% call c.card(title='Your Upcoming Appointments', style='sage', delay='0.1s') %}
             <div id='calendar'></div>
-            <div style="display:flex; gap:12px; margin-top:16px; flex-wrap:wrap;">
-                {{ forms.button('Book Appointment', type='button', style='primary', kwargs='style="flex:1; min-width:200px;" onclick="window.location.href=\'/book\'"') }}
-                {{ forms.button('Book via AI', type='button', style='primary', kwargs='style="flex:1; min-width:200px; background:var(--color-mint-veil); color:var(--color-forest-ink);" onclick="document.getElementById(\'chat-input\').focus(); document.getElementById(\'chat-input\').value = \'I want to book an appointment\'; sendMessage();"') }}
+            <div class="flex-row" style="gap:12px; margin-top:16px; flex-wrap:wrap;">
+                {{ forms.button('Book Appointment', type='button', style='primary', class='flex-1', kwargs='style="min-width:200px;" onclick="window.location.href=\'/book\'"') }}
+                {{ forms.button('Book via AI', type='button', style='primary', class='flex-1', kwargs='style="min-width:200px; background:var(--color-mint-veil); color:var(--color-forest-ink);" onclick="document.getElementById(\'chat-input\').focus(); document.getElementById(\'chat-input\').value = \'I want to book an appointment\'; if(typeof EaseChat !== \'undefined\') EaseChat.sendMessage();"') }}
             </div>
         {% endcall %}
     </div>
     
     <!-- Right column: Profile + Prescriptions -->
-    <div style="display:flex; flex-direction:column; gap:24px;">
+    <div class="flex-col" style="gap:24px;">
         {% call c.card(title='Your Health Profile', style='default', delay='0.15s') %}
             <p><strong>DOB:</strong> {{ patient.date_of_birth }}</p>
             <p><strong>Gender:</strong> {{ patient.gender }}</p>
@@ -87,7 +85,7 @@
     
     <!-- Full-width: AI Chat -->
     <div class="full-width card-animate" style="animation-delay: 0.3s; margin-top: 24px;">
-        {{ chat.ai_chat(user.full_name, default_message='Hello ' ~ user.full_name ~ ', how can I help you today? I can help you find specialists, book appointments, or update your health records.') }}
+        {{ chat.ai_chat(user.full_name) }}
     </div>
 </div>
 {% endblock %}
@@ -125,124 +123,11 @@
         calendar.render();
     });
 
-    // --- Web Speech API (TTS) Initialization ---
-    let voices = [];
-    function populateVoices() {
-        voices = window.speechSynthesis.getVoices();
-        const voiceSelect = document.getElementById('voice-select');
-        voiceSelect.innerHTML = '';
-        voices.forEach((voice, i) => {
-            const option = document.createElement('option');
-            option.textContent = voice.name + ' (' + voice.lang + ')';
-            option.value = i;
-            voiceSelect.appendChild(option);
-        });
-    }
-    populateVoices();
-    if (speechSynthesis.onvoiceschanged !== undefined) {
-        speechSynthesis.onvoiceschanged = populateVoices;
-    }
-
-    function speakText(text) {
-        if(!document.getElementById('voice-toggle').checked) return;
-        const utterance = new SpeechSynthesisUtterance(text);
-        const selectedVoice = voices[document.getElementById('voice-select').value];
-        if(selectedVoice) utterance.voice = selectedVoice;
-        window.speechSynthesis.speak(utterance);
-    }
-
-    // --- Chat Logic ---
-    function addBubble(text, isUser, extraHtml) {
-        const bubble = document.createElement('div');
-        bubble.className = 'chat-bubble ' + (isUser ? 'user' : 'assistant') + ' animate-in';
-        
-        let html = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-        html = html.replace(/\n/g, '<br>');
-        if (extraHtml) html += extraHtml;
-        bubble.innerHTML = html;
-        
-        const container = document.getElementById('chat-messages');
-        container.appendChild(bubble);
-        container.scrollTop = container.scrollHeight;
-        bubble.addEventListener('animationend', () => bubble.classList.remove('animate-in'));
-    }
-
-    function sendMessage() {
-        const input = document.getElementById('chat-input');
-        if (!input.value.trim()) return;
-        
-        const query = input.value;
-        addBubble(query, true);
-        input.value = '';
-        
-        // Show typing indicator
-        const typing = document.createElement('div');
-        typing.id = 'typing-indicator';
-        typing.className = 'chat-bubble assistant animate-in';
-        typing.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
-        document.getElementById('chat-messages').appendChild(typing);
-        document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
-        
-        fetch('/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query: query })
-        })
-        .then(response => response.json())
-        .then(data => {
-            const typingEl = document.getElementById('typing-indicator');
-            if (typingEl) typingEl.remove();
-            
-            let replyText = data.reply;
-            let actionHtml = '';
-            
-            if (replyText.includes('**ACTION_REQUIRED**')) {
-                const parts = replyText.split('**ACTION_REQUIRED**');
-                replyText = parts[0];
-                
-                try {
-                    const jsonMatch = parts[1].match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-                    let jsonStr = '';
-                    if (jsonMatch && jsonMatch[1]) {
-                        jsonStr = jsonMatch[1].trim();
-                    } else {
-                        jsonStr = parts[1].trim();
-                    }
-                    
-                    const payload = JSON.parse(jsonStr);
-                    if (payload.action === 'confirm_appointment') {
-                        actionHtml = `
-                        <div style="background:var(--color-cream-paper); border:1px solid var(--color-border-mist); border-radius:14px; padding:16px; margin-top:12px;">
-                            <h4 style="margin:0 0 12px 0; font-family:'Cormorant Garamond',serif; font-weight:300; color:var(--color-forest-ink);">Confirm Appointment</h4>
-                            <form method="POST" action="/book" style="display:flex; flex-direction:column; gap:8px;">
-                                <input type="hidden" name="doctor_id" value="${payload.doctor_id}">
-                                <div><strong>Doctor:</strong> ${payload.doctor_name}</div>
-                                <div><strong>Date:</strong> <input type="date" name="date" value="${payload.date}" required style="padding:4px;"></div>
-                                <div><strong>Time:</strong> <input type="time" name="time" value="${payload.time}" required style="padding:4px;"></div>
-                                <div><strong>Reason:</strong> <input type="text" name="reason" value="${payload.reason}" required style="padding:4px; width:100%; box-sizing:border-box;"></div>
-                                <button type="submit" class="btn-primary" style="margin-top:8px;">Confirm & Book</button>
-                            </form>
-                        </div>
-                        `;
-                    }
-                } catch(e) {
-                    console.error("Failed to parse action payload", e);
-                    actionHtml = '<div style="color:red; font-size:12px;">Error rendering form. Please try again.</div>';
-                }
-            }
-            
-            addBubble(replyText, false, actionHtml);
-            speakText(replyText);
-            
-            if (data.reload && !actionHtml) {
-                setTimeout(() => window.location.reload(), 2000);
-            }
-        })
-        .catch(error => {
-            const typingEl = document.getElementById('typing-indicator');
-            if (typingEl) typingEl.remove();
-            addBubble('Error: Failed to get response.', false);
-        });
-    }
+    // --- EaseChat Initialization ---
+    document.addEventListener('DOMContentLoaded', function() {
+        if(typeof EaseChat !== 'undefined') {
+            EaseChat.init({ endpoint: '/chat', role: 'patient' });
+        }
+    });
 </script>
 {% endblock %}

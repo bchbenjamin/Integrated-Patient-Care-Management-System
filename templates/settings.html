@@ -1,17 +1,192 @@
 {% extends "base.html" %}
 {% import 'components/forms.html' as forms %}
 {% import 'components/card.html' as c %}
+{% import 'components/tabs.html' as tabs %}
+
+{% block extra_head %}
+<style>
+.settings-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+.page-header {
+    margin-bottom: 32px;
+}
+.integration-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border: 1px solid var(--border-mist);
+    border-radius: 14px;
+    margin-bottom: 16px;
+    background-color: var(--white);
+    transition: transform var(--transition-normal);
+}
+.integration-item:hover {
+    transform: translateY(-1px);
+}
+.integration-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+.integration-icon {
+    width: 44px;
+    height: 44px;
+    background-color: var(--keylime-wash);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--forest-ink);
+}
+.integration-details h4 {
+    margin: 0 0 4px 0;
+    font-family: 'Inter', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.integration-details p {
+    margin: 0;
+    font-size: 13px;
+    color: #666;
+}
+.status-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.status-connected {
+    background-color: var(--keylime-wash);
+    color: var(--forest-ink);
+}
+.status-disconnected {
+    background-color: var(--border-mist);
+    color: #555;
+}
+@media (max-width: 768px) {
+    .integration-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+    .integration-action {
+        width: 100%;
+    }
+    .integration-action .btn {
+        width: 100%;
+        margin-top: 0;
+    }
+}
+</style>
+{% endblock %}
 
 {% block content %}
-<div style="max-width: 600px; margin: 0 auto;">
-    {% call c.card(title='Account Settings', style='slate') %}
-        <form method="POST" action="/settings" style="display:flex; flex-direction:column; gap:16px;">
-            {{ forms.input('full_name', label='Full Name', value=user.full_name, required=True) }}
-            {{ forms.input('phone', label='Phone Number', value=user.phone) }}
-            <hr style="border:0; border-top:1px solid #ccc; margin:8px 0;">
-            <p style="font-size:12px; color:#555;"><i>Note: Email addresses cannot be changed once registered. To change your password, please contact support.</i></p>
-            {{ forms.button('Save Changes', type='submit', style='primary', kwargs='style="margin-top: 8px;"') }}
-        </form>
+<div class="settings-container">
+    <div class="page-header">
+        <h1 style="margin-bottom: 8px;">Account Settings</h1>
+        <p style="color: var(--charcoal); opacity: 0.8; margin-top: 0;">Manage your profile, preferences, and connected integrations.</p>
+    </div>
+
+    {{ tabs.tab_nav([
+        {'id': 'profile', 'label': 'Profile Information'},
+        {'id': 'integrations', 'label': 'Connected Services'}
+    ], active=0) }}
+
+    {% call tabs.tab_panel('profile', active=true) %}
+        {% call c.card(style='default') %}
+            <form method="POST" action="/settings" style="display:flex; flex-direction:column; gap:16px; max-width: 500px;">
+                {{ forms.input('full_name', label='Full Name', value=user.full_name, required=True) }}
+                {{ forms.input('email', label='Email Address', value=user.email, kwargs='disabled') }}
+                {{ forms.input('phone', label='Phone Number', value=user.phone) }}
+                
+                <hr style="border:0; border-top:1px solid var(--border-mist); margin:8px 0;">
+                <p style="font-size:13px; color:#666; margin: 0; line-height: 1.5;"><i>Note: Email addresses cannot be changed once registered. To change your password, please contact our support team.</i></p>
+                
+                <div style="margin-top: 8px;">
+                    {{ forms.button('Save Changes', type='submit', style='primary', kwargs='style="width: auto; padding-left: 32px; padding-right: 32px;"') }}
+                </div>
+            </form>
+        {% endcall %}
+    {% endcall %}
+
+    {% call tabs.tab_panel('integrations') %}
+        {% call c.card(style='default', delay='0.1s') %}
+            <div style="margin-bottom: 24px;">
+                <h3 style="margin-top: 0; margin-bottom: 8px;">Integrations</h3>
+                <p style="font-size: 14px; color: #666; margin-top: 0;">Connect third-party health and calendar services to sync your personal data securely with Ease Health.</p>
+            </div>
+
+            <!-- Google Calendar -->
+            <div class="integration-item">
+                <div class="integration-info">
+                    <div class="integration-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    </div>
+                    <div class="integration-details">
+                        <h4>Google Calendar <span class="status-badge {% if integrations and integrations.google_calendar %}status-connected{% else %}status-disconnected{% endif %}">{% if integrations and integrations.google_calendar %}Connected{% else %}Disconnected{% endif %}</span></h4>
+                        <p>Sync your appointments and receive automated reminders.</p>
+                    </div>
+                </div>
+                <div class="integration-action">
+                    {% if integrations and integrations.google_calendar %}
+                        <a href="/auth/google/disconnect" class="btn btn-outline" style="margin-top: 0; width: auto;">Disconnect</a>
+                    {% else %}
+                        <a href="/auth/google/login" class="btn btn-primary" style="margin-top: 0; width: auto;">Connect</a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Google Health -->
+            <div class="integration-item">
+                <div class="integration-info">
+                    <div class="integration-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+                    </div>
+                    <div class="integration-details">
+                        <h4>Google Health <span class="status-badge {% if integrations and integrations.google_health %}status-connected{% else %}status-disconnected{% endif %}">{% if integrations and integrations.google_health %}Connected{% else %}Disconnected{% endif %}</span></h4>
+                        <p>Import your daily vitals, sleep data, and wellness metrics.</p>
+                    </div>
+                </div>
+                <div class="integration-action">
+                    {% if integrations and integrations.google_health %}
+                        <a href="/auth/google/health/disconnect" class="btn btn-outline" style="margin-top: 0; width: auto;">Disconnect</a>
+                    {% else %}
+                        <a href="/auth/google/health/login" class="btn btn-primary" style="margin-top: 0; width: auto;">Connect</a>
+                    {% endif %}
+                </div>
+            </div>
+
+
+        {% endcall %}
     {% endcall %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function switchTab(tabId, element) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        if (element) {
+            element.classList.add('active');
+        } else {
+            const targetTab = document.querySelector(`.tab[data-target="${tabId}"]`);
+            if(targetTab) targetTab.classList.add('active');
+        }
+
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        const targetContent = document.getElementById(tabId);
+        if (targetContent) {
+            targetContent.classList.add('active');
+        }
+    }
+</script>
 {% endblock %}

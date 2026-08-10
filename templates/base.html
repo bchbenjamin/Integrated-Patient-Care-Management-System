@@ -26,6 +26,9 @@
         </footer>
     </main>
 
+    <script src="/static/js/voice.js"></script>
+    <script src="/static/js/ocr.js"></script>
+    <script src="/static/js/chat.js"></script>
     {% block scripts %}{% endblock %}
 
     {% if request.session.get("user") %}
@@ -37,13 +40,13 @@
         const closeBtn = document.getElementById('sidebar-close');
 
         function openSidebar() {
-            sidebar.classList.add('open');
-            backdrop.classList.add('active');
+            if(sidebar) sidebar.classList.add('open');
+            if(backdrop) backdrop.classList.add('active');
             document.body.style.overflow = 'hidden';
         }
         function closeSidebar() {
-            sidebar.classList.remove('open');
-            backdrop.classList.remove('active');
+            if(sidebar) sidebar.classList.remove('open');
+            if(backdrop) backdrop.classList.remove('active');
             document.body.style.overflow = '';
         }
 

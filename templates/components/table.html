@@ -1,0 +1,20 @@
+{% macro data_table(headers, rows, id='', empty_message='No data available.') %}
+<div class="table-responsive">
+    {% if rows %}
+    <table {% if id %}id="{{ id }}"{% endif %}>
+        <thead>
+            <tr>
+                {% for h in headers %}
+                <th>{{ h }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {{ caller() }}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color: var(--charcoal); opacity: 0.6;">{{ empty_message }}</p>
+    {% endif %}
+</div>
+{% endmacro %}

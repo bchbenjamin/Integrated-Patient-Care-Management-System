@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 import uvicorn
 
-from app.routers import auth, dashboard, ai, prescriptions, calendar_schedule
+from app.routers import auth, dashboard, ai, prescriptions, calendar_schedule, integrations
 
 app = FastAPI(title="Ease Health IPCMS")
 
@@ -17,7 +17,7 @@ app.include_router(dashboard.router)
 app.include_router(ai.router)
 app.include_router(prescriptions.router)
 app.include_router(calendar_schedule.router)
-
+app.include_router(integrations.router)
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
     user = request.session.get("user")

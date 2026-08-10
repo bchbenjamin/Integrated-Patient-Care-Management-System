@@ -1,0 +1,41 @@
+{% macro metrics_display(metrics=None) %}
+<div class="metrics-grid">
+    {% if metrics %}
+        {% for metric in metrics %}
+        <div class="card-keylime metric-card card-animate" style="animation-delay: {{ loop.index0 * 0.1 }}s;">
+            <div style="font-size: 20px; margin-bottom: 4px;">{{ metric.icon }}</div>
+            <div class="metric-value">{{ metric.value }}</div>
+            <div class="metric-label">{{ metric.label }}</div>
+            {% if metric.trend %}
+            <div class="metric-trend {{ 'up' if metric.trend > 0 else 'down' }}">{{ '↑' if metric.trend > 0 else '↓' }} {{ metric.trend_text }}</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    {% else %}
+    <div class="card" style="grid-column: 1 / -1; text-align: center; padding: 48px;">
+        <p style="font-size: 32px; margin-bottom: 8px;">🔗</p>
+        <h4>Connect Health Services</h4>
+        <p style="font-size: 14px; opacity: 0.6;">Link Google Health to see your health metrics here.</p>
+        <a href="/settings" class="btn-primary" style="display:inline-block; width:auto; padding:10px 24px; margin-top:12px;">Go to Settings</a>
+    </div>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{% macro activity_feed(activities=None) %}
+<div>
+    {% if activities %}
+        {% for a in activities %}
+        <div class="activity-item">
+            <div class="activity-icon">{{ a.icon }}</div>
+            <div class="activity-content">
+                <strong>{{ a.title }}</strong>
+                <small>{{ a.description }} · {{ a.time_ago }}</small>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+    <p style="color: var(--charcoal); opacity: 0.6; text-align: center; padding: 24px;">No recent activity. Connect a fitness tracker in Settings.</p>
+    {% endif %}
+</div>
+{% endmacro %}

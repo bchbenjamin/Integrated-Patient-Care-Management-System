@@ -1,0 +1,8 @@
+{% macro stat_card(label, value, icon='', style='default', delay='0s', **kwargs) %}
+{% set style_class = 'card' if style == 'default' else 'card-' ~ style %}
+<div class="{{ style_class }} stat-card card-animate" style="animation-delay: {{ delay }};">
+    {% if icon %}<div style="font-size: 24px; margin-bottom: 8px;">{{ icon }}</div>{% endif %}
+    <div class="stat-value">{{ value }}</div>
+    <div class="stat-label">{{ label }}</div>
+</div>
+{% endmacro %}

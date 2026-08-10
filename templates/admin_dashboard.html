@@ -1,37 +1,34 @@
 {% extends "base.html" %}
 {% import 'components/forms.html' as forms %}
 {% import 'components/card.html' as c %}
+{% import 'components/stat_card.html' as stat %}
+{% import 'components/table.html' as table %}
 
 {% block content %}
-<div class="eyebrow">ADMINISTRATOR DASHBOARD</div>
+<div class="eyebrow">SYSTEM ADMINISTRATION</div>
 <h2>System Overview</h2>
 
-<div class="flex-row">
-    {% call c.card(style='default', class='flex-1') %}
-        <div class="eyebrow">TOTAL PATIENTS</div>
-        <div style="font-family: 'Cormorant Garamond', serif; font-size: 40px; color: var(--color-forest-ink);">
-            {{ stats.patients }}
-        </div>
+<div class="flex-row" style="gap:24px; margin-bottom: 24px;">
+    {{ stat.stat_card('Total Patients', stats.patients, class='flex-1') }}
+    {{ stat.stat_card('Total Doctors', stats.doctors, class='flex-1', delay='0.1s') }}
+    {{ stat.stat_card('Total Appointments', stats.appointments, class='flex-1', delay='0.2s') }}
+</div>
+
+<div class="flex-col" style="gap:24px;">
+    {% call c.card(title='System Users', style='slate') %}
+        {% if users %}
+            {{ table.data_table(headers=['ID', 'Name', 'Role', 'Status'], rows=users, actions=true) }}
+        {% else %}
+            <p style="color:#555;">No recent users available to display.</p>
+        {% endif %}
     {% endcall %}
-    {% call c.card(style='default', class='flex-1', delay='0.1s') %}
-        <div class="eyebrow">TOTAL DOCTORS</div>
-        <div style="font-family: 'Cormorant Garamond', serif; font-size: 40px; color: var(--color-forest-ink);">
-            {{ stats.doctors }}
-        </div>
-    {% endcall %}
-    {% call c.card(style='default', class='flex-1', delay='0.2s') %}
-        <div class="eyebrow">TOTAL APPOINTMENTS</div>
-        <div style="font-family: 'Cormorant Garamond', serif; font-size: 40px; color: var(--color-forest-ink);">
-            {{ stats.appointments }}
+
+    {% call c.card(title='Quick Actions', style='sage', delay='0.3s') %}
+        <div class="flex-row" style="gap:16px;">
+            {{ forms.button('Manage Doctors', type='button', style='primary', class='flex-1') }}
+            {{ forms.button('System Settings', type='button', style='primary', class='flex-1') }}
+            {{ forms.button('View Analytics', type='button', style='primary', class='flex-1') }}
         </div>
     {% endcall %}
 </div>
-
-{% call c.card(title='Quick Actions', style='sage', delay='0.3s') %}
-    <div class="flex-row">
-        {{ forms.button('Manage Doctors', type='button', style='primary', class='flex-1') }}
-        {{ forms.button('System Settings', type='button', style='primary', class='flex-1') }}
-        {{ forms.button('View Analytics', type='button', style='primary', class='flex-1') }}
-    </div>
-{% endcall %}
 {% endblock %}
