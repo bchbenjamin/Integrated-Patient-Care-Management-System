@@ -41,7 +41,7 @@ def expand_prescription_events(prescription: dict, range_start: datetime.date, r
     dosage = prescription.get('dosage', '')
     rx_id = prescription.get('id')
     
-    title = f"💊 {medicine}"
+    title = f"Rx: {medicine}"
     if dosage:
         title += f" ({dosage})"
     

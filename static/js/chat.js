@@ -20,7 +20,8 @@ const EaseChat = (function() {
         Object.assign(config, options);
     }
 
-    function addBubble(text, isUser, extraHtml) {
+    function addBubble(text, isUser, extraHtml, isStreaming = false) {
+        let wrapper = null;
         const bubble = document.createElement('div');
         bubble.className = 'chat-bubble ' + (isUser ? 'user' : 'assistant') + ' animate-in';
         
@@ -28,20 +29,35 @@ const EaseChat = (function() {
         if (extraHtml) html += extraHtml;
         bubble.innerHTML = html;
 
-        // Add speak button to assistant messages
-        if (!isUser && text.trim()) {
-            const speakBtn = document.createElement('button');
-            speakBtn.className = 'btn-speak';
-            speakBtn.textContent = '🔊';
-            speakBtn.title = 'Read aloud';
-            speakBtn.onclick = function() { EaseVoice.speak(text); };
-            bubble.appendChild(speakBtn);
+        if (!isUser) {
+            wrapper = document.createElement('div');
+            wrapper.className = 'chat-message-wrapper animate-in';
+            
+            const avatar = document.createElement('img');
+            avatar.src = '/static/assets/mascot.png';
+            avatar.className = 'chat-message-avatar';
+            avatar.alt = 'Ease Mascot';
+            
+            wrapper.appendChild(avatar);
+            wrapper.appendChild(bubble);
+            
+            if (text.trim() && !isStreaming) {
+                const speakBtn = document.createElement('button');
+                speakBtn.className = 'btn-speak';
+                speakBtn.textContent = 'Speak';
+                speakBtn.title = 'Read aloud';
+                speakBtn.onclick = function() { EaseVoice.speak(text); };
+                bubble.appendChild(speakBtn);
+            }
         }
         
         const container = document.getElementById(config.messagesContainerId);
-        container.appendChild(bubble);
+        const targetElement = wrapper || bubble;
+        container.appendChild(targetElement);
         container.scrollTop = container.scrollHeight;
-        bubble.addEventListener('animationend', () => bubble.classList.remove('animate-in'));
+        targetElement.addEventListener('animationend', () => targetElement.classList.remove('animate-in'));
+        
+        return { bubble, wrapper };
     }
 
     function renderMarkdown(text) {
@@ -54,8 +70,20 @@ const EaseChat = (function() {
     function showTyping() {
         const typing = document.createElement('div');
         typing.id = 'typing-indicator';
-        typing.className = 'chat-bubble assistant animate-in';
-        typing.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
+        typing.className = 'chat-message-wrapper animate-in';
+        
+        const avatar = document.createElement('img');
+        avatar.src = '/static/assets/mascot.png';
+        avatar.className = 'chat-message-avatar';
+        avatar.alt = 'Ease Mascot';
+        
+        const bubble = document.createElement('div');
+        bubble.className = 'chat-bubble assistant';
+        bubble.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
+        
+        typing.appendChild(avatar);
+        typing.appendChild(bubble);
+        
         const container = document.getElementById(config.messagesContainerId);
         container.appendChild(typing);
         container.scrollTop = container.scrollHeight;
@@ -141,10 +169,9 @@ const EaseChat = (function() {
         const text = input.value.trim();
         if (!text && !window.__pendingFile) return;
 
-        // If there's a pending file, send it via OCR first
         if (window.__pendingFile) {
             const file = window.__pendingFile;
-            addBubble('📎 Uploaded: ' + file.name, true);
+            addBubble('Uploaded: ' + file.name, true);
             input.value = '';
             showTyping();
             EaseOCR.processFile(file, text).then(ocrResult => {
@@ -152,10 +179,8 @@ const EaseChat = (function() {
                 if (ocrResult.error) {
                     addBubble('Error processing file: ' + ocrResult.error, false);
                 } else {
-                    addBubble(ocrResult.reply || ocrResult.extracted_text || 'File processed.', false);
-                    if (typeof EaseVoice !== 'undefined' && ocrResult.reply) {
-                        EaseVoice.speak(ocrResult.reply);
-                    }
+                    const reply = ocrResult.reply || ocrResult.extracted_text || 'File processed.';
+                    handleVoiceReply(reply, '');
                 }
             }).catch(err => {
                 removeTyping();
@@ -180,15 +205,7 @@ const EaseChat = (function() {
         .then(data => {
             removeTyping();
             const { cleanText, actionHtml } = parseActionRequired(data.reply);
-            addBubble(cleanText, false, actionHtml);
-            
-            if (typeof EaseVoice !== 'undefined') {
-                EaseVoice.speak(cleanText);
-            }
-
-            if (data.reload && !actionHtml) {
-                setTimeout(() => window.location.reload(), 2000);
-            }
+            handleVoiceReply(cleanText, actionHtml, data.reload);
         })
         .catch(error => {
             removeTyping();
@@ -197,7 +214,38 @@ const EaseChat = (function() {
         });
     }
 
-    // Make sendMessage globally available (used by onclick in chat.html)
+    function handleVoiceReply(cleanText, actionHtml, shouldReload) {
+        const toggle = document.getElementById('voice-toggle');
+        const voiceEnabled = toggle && toggle.checked;
+
+        if (typeof EaseVoice !== 'undefined' && voiceEnabled) {
+            const { bubble, wrapper } = addBubble('', false, '', true);
+            if (wrapper) wrapper.querySelector('.chat-message-avatar').classList.add('mascot-talking');
+            
+            const fab = document.getElementById('chat-fab');
+            const headerAvatar = document.querySelector('.chat-panel-header-left img');
+            if (fab) fab.classList.add('mascot-talking');
+            if (headerAvatar) headerAvatar.classList.add('mascot-talking');
+            
+            EaseVoice.speak(cleanText, {
+                onProgress: (spokenText) => {
+                    bubble.innerHTML = renderMarkdown(spokenText);
+                },
+                onEnd: () => {
+                    bubble.innerHTML = renderMarkdown(cleanText) + actionHtml;
+                    if (wrapper) wrapper.querySelector('.chat-message-avatar').classList.remove('mascot-talking');
+                    if (fab) fab.classList.remove('mascot-talking');
+                    if (headerAvatar) headerAvatar.classList.remove('mascot-talking');
+                    
+                    if (shouldReload && !actionHtml) setTimeout(() => window.location.reload(), 2000);
+                }
+            });
+        } else {
+            addBubble(cleanText, false, actionHtml);
+            if (shouldReload && !actionHtml) setTimeout(() => window.location.reload(), 2000);
+        }
+    }
+
     window.sendMessage = sendMessage;
 
     return {

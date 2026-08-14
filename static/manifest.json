@@ -1,7 +1,7 @@
 {
   "name": "Ease Health IPCMS",
   "short_name": "Ease Health",
-  "description": "Integrated Patient Care Management System",
+  "description": "Patient Care Management System for Healthcare Services",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#fffefc",

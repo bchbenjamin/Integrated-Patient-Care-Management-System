@@ -23,6 +23,43 @@ def extract_text_from_image(image_bytes: bytes) -> str:
         return f"OCR Error: {str(e)}"
 
 
+def extract_handwritten_text(image_path: str) -> str:
+    """Extract handwritten text from an image with heavy preprocessing."""
+    try:
+        from PIL import Image, ImageFilter
+        import pytesseract
+        
+        image = Image.open(image_path)
+        
+        # Preprocessing with Pillow
+        image = image.convert('L')  # Convert to grayscale
+        
+        # Denoise
+        image = image.filter(ImageFilter.MedianFilter())
+        
+        # Adaptive thresholding using Pillow (simulated using ImageFilter.MinFilter/MaxFilter or simply point if tricky)
+        # We'll use a basic approach that acts like thresholding if cv2 isn't available
+        try:
+            import cv2
+            import numpy as np
+            img_array = np.array(image)
+            img_array = cv2.adaptiveThreshold(
+                img_array, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2
+            )
+            image = Image.fromarray(img_array)
+        except ImportError:
+            # Fallback to Pillow point evaluation for simple thresholding
+            threshold = 128
+            image = image.point(lambda p: p > threshold and 255)
+            
+        # Use LSTM neural net mode (oem 1) and assume a uniform block of text (psm 6)
+        custom_config = r'--oem 1 --psm 6'
+        text = pytesseract.image_to_string(image, lang='eng', config=custom_config)
+        return text.strip()
+    except Exception as e:
+        return f"OCR Error: {str(e)}"
+
+
 def extract_text_from_pdf(pdf_bytes: bytes) -> str:
     """Extract text from a PDF file. Tries text extraction first, falls back to OCR."""
     try:

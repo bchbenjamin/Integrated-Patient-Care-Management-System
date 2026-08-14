@@ -9,25 +9,30 @@
 <h2>System Overview</h2>
 
 <div class="flex-row" style="gap:24px; margin-bottom: 24px;">
-    {{ stat.stat_card('Total Patients', stats.patients, class='flex-1') }}
-    {{ stat.stat_card('Total Doctors', stats.doctors, class='flex-1', delay='0.1s') }}
-    {{ stat.stat_card('Total Appointments', stats.appointments, class='flex-1', delay='0.2s') }}
+    {{ stat.stat_card('Total Patients', stats.patients) }}
+    {{ stat.stat_card('Total Doctors', stats.doctors, delay='0.1s') }}
+    {{ stat.stat_card('Total Appointments', stats.appointments, delay='0.2s') }}
 </div>
 
 <div class="flex-col" style="gap:24px;">
-    {% call c.card(title='System Users', style='slate') %}
-        {% if users %}
-            {{ table.data_table(headers=['ID', 'Name', 'Role', 'Status'], rows=users, actions=true) }}
-        {% else %}
-            <p style="color:#555;">No recent users available to display.</p>
-        {% endif %}
+    {% call c.card(title='System Users', style='slate', delay='0.3s') %}
+        {% call table.data_table(headers=['ID', 'Name', 'Role', 'Status'], rows=users) %}
+            {% for u in users %}
+            <tr>
+                <td>#{{ u.id }}</td>
+                <td style="font-weight: 600;">{{ u.full_name }}</td>
+                <td><span class="badge" style="background: var(--keylime-wash); color: var(--forest-ink); padding: 4px 8px; border-radius: 4px; font-size: 12px;">{{ u.role|capitalize }}</span></td>
+                <td>Active</td>
+            </tr>
+            {% endfor %}
+        {% endcall %}
     {% endcall %}
 
-    {% call c.card(title='Quick Actions', style='sage', delay='0.3s') %}
+    {% call c.card(title='Quick Actions', style='sage', delay='0.4s') %}
         <div class="flex-row" style="gap:16px;">
             {{ forms.button('Manage Doctors', type='button', style='primary', class='flex-1') }}
             {{ forms.button('System Settings', type='button', style='primary', class='flex-1') }}
-            {{ forms.button('View Analytics', type='button', style='primary', class='flex-1') }}
+            {{ forms.button('View Analytics', type='button', style='outline', class='flex-1') }}
         </div>
     {% endcall %}
 </div>

@@ -1,9 +1,9 @@
 {% macro medicine_card(name, dosage, frequency='', duration='', doctor_name='', cost='', image_url='', prescription_id=None, taken_today=false, show_actions=true) %}
 <div class="medicine-card">
     {% if image_url %}
-    <img src="{{ image_url }}" alt="{{ name }}" class="medicine-card-image" onerror="this.src='data:image/svg+xml,<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; viewBox=&quot;0 0 64 64&quot; fill=&quot;%230f3e17&quot;><text x=&quot;50%&quot; y=&quot;55%&quot; dominant-baseline=&quot;middle&quot; text-anchor=&quot;middle&quot; font-size=&quot;32&quot;>💊</text></svg>'">
+    <img src="{{ image_url }}" alt="{{ name }}" class="medicine-card-image" onerror="this.src='data:image/svg+xml,<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; viewBox=&quot;0 0 64 64&quot; fill=&quot;%230f3e17&quot;><text x=&quot;50%&quot; y=&quot;55%&quot; dominant-baseline=&quot;middle&quot; text-anchor=&quot;middle&quot; font-size=&quot;32&quot;><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 20.5A7 7 0 0 1 3.5 13.5l7-7a7 7 0 0 1 9.9 9.9l-7 7a7 7 0 0 1-2.9 1.1Z"/><path d="m8.5 8.5 7 7"/></svg></text></svg>'">
     {% else %}
-    <div class="medicine-card-image" style="display:flex; align-items:center; justify-content:center; font-size:28px;">💊</div>
+    <div class="medicine-card-image" style="display:flex; align-items:center; justify-content:center; font-size:28px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 20.5A7 7 0 0 1 3.5 13.5l7-7a7 7 0 0 1 9.9 9.9l-7 7a7 7 0 0 1-2.9 1.1Z"/><path d="m8.5 8.5 7 7"/></svg></div>
     {% endif %}
     <div class="medicine-card-info">
         <h4>{{ name }}</h4>
@@ -14,14 +14,14 @@
     {% if show_actions and prescription_id %}
     <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
         {% if taken_today %}
-        <span class="badge badge-success">✔ Taken</span>
+        <span class="badge badge-success"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><polyline points="20 6 9 17 4 12"></polyline></svg> Taken</span>
         {% else %}
         <form method="POST" action="/api/medication/log" style="margin:0;">
             <input type="hidden" name="prescription_id" value="{{ prescription_id }}">
             <button type="submit" class="btn-primary" style="margin:0; padding:6px 12px; font-size:12px; width:auto;">Mark Taken</button>
         </form>
         {% endif %}
-        <a href="/prescriptions/{{ prescription_id }}/download" target="_blank" class="btn-download" style="font-size:12px;">📄 PDF</a>
+        <a href="/prescriptions/{{ prescription_id }}/download" target="_blank" class="btn-download" style="font-size:12px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> PDF</a>
     </div>
     {% endif %}
 </div>

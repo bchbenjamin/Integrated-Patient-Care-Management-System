@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}2-Step Verification - Ease Health{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 400px; margin: 40px auto; text-align: center;">
+    <h2>2-Step Verification</h2>
+    <p style="color: var(--charcoal); margin-bottom: 24px;">
+        We've sent a 6-digit code to <strong>{{ email }}</strong>. Please enter it below to securely log in.
+    </p>
+    
+    {% if error %}
+    <div style="background: #ffebee; color: #c62828; padding: 12px; border-radius: 4px; margin-bottom: 16px;">
+        {{ error }}
+    </div>
+    {% endif %}
+    
+    <form method="POST" action="/2fa/verify">
+        <input type="text" name="code" placeholder="123456" required autofocus autocomplete="off"
+               style="width: 100%; padding: 12px; font-size: 24px; text-align: center; letter-spacing: 4px; margin-bottom: 16px; border: 1px solid var(--border-mist); border-radius: 7px;">
+        
+        <button type="submit" class="btn-primary" style="width: 100%;">Verify Code</button>
+    </form>
+    
+    <div style="margin-top: 16px;">
+        <a href="/login" style="color: var(--forest-ink); font-size: 14px;">Cancel and go back to login</a>
+    </div>
+</div>
+{% endblock %}

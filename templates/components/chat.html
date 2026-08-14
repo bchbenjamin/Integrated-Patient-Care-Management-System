@@ -1,51 +1,256 @@
-{% macro ai_chat(user_name, default_message="Hello, how can I help you today?", endpoint='/chat') %}
-<div class="chat-container" id="chat-widget">
-    <div style="padding: 16px; border-bottom: 1px solid var(--border-mist); background: var(--cream-paper);">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h3 style="margin:0;">AI Clinical Assistant</h3>
-            <div class="voice-controls">
-                <label style="font-size:12px; display:flex; align-items:center; gap:4px;">
-                    <input type="checkbox" id="voice-toggle"> Voice
-                </label>
-                <select id="voice-select" style="font-size:11px; padding:2px 4px; border-radius:4px; max-width:120px; border:1px solid var(--border-mist);"></select>
+{% macro ai_chat(user_name, default_message="Hello! I'm Ease, your health companion. How can I help?", endpoint='/chat') %}
+<style>
+/* CSS for floating widget */
+.chat-widget-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 9999;
+    font-family: 'Inter', sans-serif;
+}
+.chat-widget-fab {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background-color: var(--cream-paper, #fffefc);
+    border: 1px solid var(--border-mist, #efeeeb);
+    box-shadow: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    animation: bounce 2s infinite;
+    transition: transform 0.2s ease;
+    padding: 0;
+}
+.chat-widget-fab:hover {
+    transform: scale(1.05);
+}
+.chat-widget-fab img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% {transform: translateY(0);}
+    40% {transform: translateY(-10px);}
+    60% {transform: translateY(-5px);}
+}
+.chat-panel {
+    display: none;
+    flex-direction: column;
+    width: 400px;
+    height: 500px;
+    background: var(--cream-paper, #fffefc);
+    border: 1px solid var(--border-mist, #efeeeb);
+    border-radius: 14px;
+    overflow: hidden;
+    position: absolute;
+    bottom: 0;
+    right: 0;
+}
+@media (max-width: 480px) {
+    .chat-panel {
+        position: fixed;
+        bottom: 0;
+        right: 0;
+        width: 100vw;
+        height: 100vh;
+        border-radius: 0;
+    }
+}
+.chat-panel.active {
+    display: flex;
+}
+.chat-panel-header {
+    padding: 16px;
+    border-bottom: 1px solid var(--border-mist, #efeeeb);
+    background: var(--sage-mist, #b1dbb8);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.chat-panel-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.chat-panel-header-left img {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--cream-paper, #fffefc);
+    border: 1px solid var(--border-mist, #efeeeb);
+}
+.chat-panel-header h3 {
+    margin: 0;
+    font-family: 'Cormorant Garamond', serif;
+    color: var(--forest-ink, #0f3e17);
+    font-size: 20px;
+    font-weight: 600;
+}
+.chat-panel-header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.chat-settings {
+    position: relative;
+}
+.chat-settings-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: var(--cream-paper, #fffefc);
+    border: 1px solid var(--border-mist, #efeeeb);
+    border-radius: 8px;
+    padding: 8px;
+    min-width: 150px;
+    z-index: 10;
+}
+.chat-settings-menu.active {
+    display: block;
+}
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    background: var(--cream-paper, #fffefc);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+.chat-message-wrapper {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+}
+.chat-message-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--mint-veil, #cfe7d3);
+    flex-shrink: 0;
+}
+.chat-bubble {
+    padding: 12px 16px;
+    border-radius: 14px;
+    max-width: 80%;
+    font-size: 14px;
+}
+.chat-bubble.assistant {
+    background: var(--slate-hush, #b6ced5);
+    color: var(--forest-ink, #0f3e17);
+    border-bottom-left-radius: 4px;
+}
+.chat-bubble.user {
+    background: var(--keylime-wash, #e1f4df);
+    color: var(--forest-ink, #0f3e17);
+    border-bottom-right-radius: 4px;
+    margin-left: auto;
+}
+.chat-input-bar {
+    padding: 12px;
+    border-top: 1px solid var(--border-mist, #efeeeb);
+    background: var(--cream-paper, #fffefc);
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+.chat-input-bar input[type="text"] {
+    flex-grow: 1;
+    min-width: 0;
+    padding: 10px;
+    border: 1px solid var(--border-mist, #efeeeb);
+    border-radius: 14px;
+    background: var(--cream-paper, #fffefc);
+}
+</style>
+
+<div class="chat-widget-container" id="chat-widget">
+    <!-- Collapsed FAB -->
+    <button class="chat-widget-fab" id="chat-fab" onclick="document.getElementById('chat-panel').classList.add('active'); this.style.display='none';">
+        <img src="/static/assets/mascot.png" alt="Ease Mascot">
+    </button>
+    
+    <!-- Expanded Panel -->
+    <div class="chat-panel" id="chat-panel">
+        <div class="chat-panel-header">
+            <div class="chat-panel-header-left">
+                <img src="/static/assets/mascot.png" alt="Ease Mascot">
+                <h3>Ease</h3>
+            </div>
+            <div class="chat-panel-header-right">
+                <div class="chat-settings">
+                    <button type="button" class="btn-icon" onclick="document.getElementById('chat-settings-menu').classList.toggle('active')" style="background:transparent; border:none; padding:4px;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--forest-ink, #0f3e17)" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                    </button>
+                    <div class="chat-settings-menu" id="chat-settings-menu">
+                        <div class="voice-controls flex-col" style="gap:8px;">
+                            <label style="font-size:12px; display:flex; align-items:center; gap:4px; color:var(--forest-ink, #0f3e17);">
+                                <input type="checkbox" id="voice-toggle"> Enable Voice
+                            </label>
+                            <select id="voice-select" style="font-size:11px; padding:4px; border-radius:4px; width:100%; border:1px solid var(--border-mist, #efeeeb);"></select>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="btn-icon" onclick="document.getElementById('chat-panel').classList.remove('active'); document.getElementById('chat-fab').style.display='flex';" style="background:transparent; border:none; padding:4px;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--forest-ink, #0f3e17)" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
             </div>
         </div>
-    </div>
-    
-    <div id="chat-messages" class="chat-messages">
-        <div class="chat-bubble assistant animate-in">
-            {{ default_message }}
+        
+        <div id="chat-messages" class="chat-messages">
+            <div class="chat-message-wrapper">
+                <img src="/static/assets/mascot.png" class="chat-message-avatar" alt="Ease Mascot">
+                <div class="chat-bubble assistant animate-in">
+                    {{ default_message }}
+                </div>
+            </div>
         </div>
-    </div>
 
-    <!-- File preview area (hidden by default) -->
-    <div id="file-preview-area" style="display:none; padding: 8px 12px; border-top: 1px solid var(--border-mist); background: var(--cream-paper);">
-        <div id="file-preview" class="file-preview">
-            <span id="file-preview-name"></span>
-            <button type="button" class="remove-file" onclick="clearFileUpload()">&times;</button>
+        <div id="file-preview-area" style="display:none; padding: 8px 12px; border-top: 1px solid var(--border-mist, #efeeeb); background: var(--cream-paper, #fffefc);">
+            <div id="file-preview" class="file-preview" style="display:flex; justify-content:space-between; align-items:center;">
+                <span id="file-preview-name" style="font-size:12px; color:var(--forest-ink, #0f3e17);"></span>
+                <button type="button" class="remove-file btn-icon" onclick="clearFileUpload()" style="background:transparent; border:none; padding:0; font-size:16px;">&times;</button>
+            </div>
         </div>
-    </div>
-    
-    <div class="chat-input-bar">
-        <!-- File upload button -->
-        <button type="button" class="btn-icon" onclick="document.getElementById('ocr-file-input').click()" title="Upload prescription image">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
-        </button>
-        <input type="file" id="ocr-file-input" accept="image/*,.pdf" style="display:none" onchange="handleFileSelect(this)">
         
-        <!-- Text input -->
-        <input type="text" id="chat-input" placeholder="Type your query..." onkeypress="if(event.key === 'Enter') sendMessage()" style="min-width: 0; flex-grow: 1;">
-        
-        <!-- Voice input button -->
-        <button type="button" class="btn-icon" id="voice-input-btn" onclick="toggleVoiceInput()" title="Voice input">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-        </button>
-        
-        <!-- Send button -->
-        <button type="button" class="btn-primary" style="width:auto; margin:0; padding: 10px 20px;" onclick="sendMessage()">Send</button>
+        <div class="chat-input-bar">
+            <!-- File upload button -->
+            <button type="button" class="btn-icon" onclick="document.getElementById('ocr-file-input').click()" title="Upload prescription image" style="background:transparent; border:none; padding:8px;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--forest-ink, #0f3e17)" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+            </button>
+            <input type="file" id="ocr-file-input" accept="image/*,.pdf" style="display:none" onchange="handleFileSelect(this)">
+            
+            <!-- Text input -->
+            <input type="text" id="chat-input" placeholder="Type your query..." onkeypress="if(event.key === 'Enter') sendMessage()" style="min-width: 0; flex-grow: 1;">
+            
+            <!-- Voice input button -->
+            <button type="button" class="btn-icon" id="voice-input-btn" onclick="toggleVoiceInput()" title="Voice input" style="background:transparent; border:none; padding:8px;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--forest-ink, #0f3e17)" stroke-width="2"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+            </button>
+            
+            <!-- Send button -->
+            <button type="button" class="btn-primary" style="width:auto; margin:0; padding: 10px 16px;" onclick="sendMessage()">Send</button>
+        </div>
     </div>
 </div>
 
 <!-- Hidden attribute to pass endpoint to JS -->
 <script>window.__chatEndpoint = '{{ endpoint }}';</script>
+<script>
+// Close settings menu when clicking outside
+document.addEventListener('click', function(event) {
+    const menu = document.getElementById('chat-settings-menu');
+    const settingsBtn = event.target.closest('.chat-settings');
+    if (menu && menu.classList.contains('active') && !settingsBtn) {
+        menu.classList.remove('active');
+    }
+});
+</script>
 {% endmacro %}

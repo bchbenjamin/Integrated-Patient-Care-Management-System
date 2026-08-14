@@ -11,10 +11,23 @@
 <h2>Welcome, {{ user.full_name }}</h2>
 
 <div class="dashboard-grid">
-    <!-- Left column: Medications + Calendar -->
+    <!-- Left column: Calendar + Medications -->
     <div class="flex-col" style="gap:24px;">
-        {{ health.metrics_display(health_metrics) }}
-        {{ health.activity_feed(recent_activities) }}
+        {% if health_metrics %}
+            {{ health.metrics_display(health_metrics) }}
+        {% endif %}
+        
+        {% if recent_activities %}
+            {{ health.activity_feed(recent_activities) }}
+        {% endif %}
+
+        {% call c.card(title='Your Upcoming Appointments', style='sage', delay='0.1s') %}
+            <div id='calendar'></div>
+            <div class="flex-row" style="gap:12px; margin-top:16px; flex-wrap:wrap;">
+                {{ forms.button('Book Appointment', type='button', style='primary', class='flex-1', kwargs='style="min-width:200px;" onclick="window.location.href=\'/book\'"') }}
+                {{ forms.button('Book via AI', type='button', style='primary', class='flex-1', kwargs='style="min-width:200px; background:var(--color-mint-veil); color:var(--color-forest-ink);" onclick="document.getElementById(\'chat-panel\').classList.add(\'active\'); document.getElementById(\'chat-fab\').style.display=\'none\'; document.getElementById(\'chat-input\').focus(); document.getElementById(\'chat-input\').value = \'I want to book an appointment\'; if(typeof EaseChat !== \'undefined\') EaseChat.sendMessage();"') }}
+            </div>
+        {% endcall %}
 
         {% call c.card(title='My Medications', style='slate') %}
             {% if prescriptions %}
@@ -34,14 +47,6 @@
             {% else %}
             <p style="color:#555;">You have no active prescriptions.</p>
             {% endif %}
-        {% endcall %}
-        
-        {% call c.card(title='Your Upcoming Appointments', style='sage', delay='0.1s') %}
-            <div id='calendar'></div>
-            <div class="flex-row" style="gap:12px; margin-top:16px; flex-wrap:wrap;">
-                {{ forms.button('Book Appointment', type='button', style='primary', class='flex-1', kwargs='style="min-width:200px;" onclick="window.location.href=\'/book\'"') }}
-                {{ forms.button('Book via AI', type='button', style='primary', class='flex-1', kwargs='style="min-width:200px; background:var(--color-mint-veil); color:var(--color-forest-ink);" onclick="document.getElementById(\'chat-input\').focus(); document.getElementById(\'chat-input\').value = \'I want to book an appointment\'; if(typeof EaseChat !== \'undefined\') EaseChat.sendMessage();"') }}
-            </div>
         {% endcall %}
     </div>
     
@@ -82,12 +87,10 @@
             </div>
         {% endcall %}
     </div>
-    
-    <!-- Full-width: AI Chat -->
-    <div class="full-width card-animate" style="animation-delay: 0.3s; margin-top: 24px;">
-        {{ chat.ai_chat(user.full_name) }}
-    </div>
 </div>
+
+<!-- Floating Chat Widget -->
+{{ chat.ai_chat(user.full_name) }}
 {% endblock %}
 
 {% block scripts %}

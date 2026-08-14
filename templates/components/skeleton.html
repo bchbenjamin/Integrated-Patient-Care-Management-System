@@ -1,0 +1,23 @@
+{% macro text_block(lines=3, delay='0s') %}
+<div class="skeleton-block card-animate" style="animation-delay: {{ delay }};">
+    {% for i in range(lines) %}
+    <div class="skeleton skeleton-text" style="width: {{ [100, 85, 70, 90, 60][i % 5] }}%;"></div>
+    {% endfor %}
+</div>
+{% endmacro %}
+
+{% macro card_placeholder(delay='0s') %}
+<div class="card skeleton-block card-animate" style="animation-delay: {{ delay }};">
+    <div class="skeleton skeleton-title" style="width: 40%;"></div>
+    <div class="skeleton skeleton-text" style="width: 100%;"></div>
+    <div class="skeleton skeleton-text" style="width: 85%;"></div>
+    <div class="skeleton skeleton-text" style="width: 70%;"></div>
+</div>
+{% endmacro %}
+
+{% macro stat_placeholder(delay='0s') %}
+<div class="card stat-card skeleton-block card-animate" style="animation-delay: {{ delay }};">
+    <div class="skeleton skeleton-circle"></div>
+    <div class="skeleton skeleton-title" style="width: 60%; margin: 8px auto 0;"></div>
+</div>
+{% endmacro %}

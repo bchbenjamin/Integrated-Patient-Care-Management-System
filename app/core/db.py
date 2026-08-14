@@ -1,69 +1,100 @@
-"""
-db.py — Database Connection Layer
-Provides helper functions for connecting to the remote TiDB Cloud MySQL database
-and executing queries safely using pymysql.
-"""
-try:
-    import pymysql
-except ModuleNotFoundError:
-    import sys, subprocess
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "pymysql"])
-finally:
-    import pymysql
+import pymysql
 import os
-
-try:
-    from dotenv import load_dotenv
-except ModuleNotFoundError:
-    import sys, subprocess
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "python-dotenv"])
-finally:
-    from dotenv import load_dotenv
+from dotenv import load_dotenv
+from dbutils.pooled_db import PooledDB
+from cachetools import TTLCache
 
 load_dotenv()
 
-def get_connection():
-    """Returns a pymysql connection to the TiDB Cloud database."""
-    return pymysql.connect(
-        host=os.getenv("DB_HOST", "localhost"),
-        port=int(os.getenv("DB_PORT", 4000)),
-        user=os.getenv("DB_USER", "root"),
-        password=os.getenv("DB_PASSWORD", ""),
-        database=os.getenv("DB_NAME", "ipcms"),
-        ssl={"ssl": True} if os.getenv("DB_HOST", "localhost") != "localhost" else None,
-        cursorclass=pymysql.cursors.DictCursor,
-        autocommit=True,
-    )
+# Initialize connection pool
+# pool of 5 connections, max 20
+pool = PooledDB(
+    creator=pymysql,
+    maxconnections=20,
+    mincached=5,
+    maxcached=20,
+    blocking=True,
+    host=os.getenv('DB_HOST', 'localhost'),
+    port=int(os.getenv('DB_PORT', 4000)),
+    user=os.getenv('DB_USER', 'root'),
+    password=os.getenv('DB_PASSWORD', ''),
+    database=os.getenv('DB_NAME', 'ipcms'),
+    ssl={'ssl': True} if os.getenv('DB_HOST', 'localhost') != 'localhost' else None,
+    cursorclass=pymysql.cursors.DictCursor,
+    autocommit=True,
+)
 
+# Initialize query cache (SELECT query results for 60 seconds)
+query_cache = TTLCache(maxsize=1024, ttl=60)
+
+def cache_bust():
+    """Clear the query cache."""
+    query_cache.clear()
+
+def _make_cache_key(query, params):
+    if params is None:
+        return query
+    if isinstance(params, (list, tuple)):
+        return (query, tuple(params))
+    if isinstance(params, dict):
+        return (query, frozenset(params.items()))
+    return (query, str(params))
+
+def get_connection():
+    return pool.connection()
 
 def execute_query(query, params=None):
-    """Execute an INSERT/UPDATE/DELETE query. Returns lastrowid for INSERTs."""
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
             cursor.execute(query, params)
-            return cursor.lastrowid
+            result = cursor.lastrowid
+        
+        # Call cache_bust after mutations
+        upper_query = query.strip().upper()
+        if upper_query.startswith(("INSERT", "UPDATE", "DELETE", "REPLACE", "DROP", "CREATE", "ALTER")):
+            cache_bust()
+            
+        return result
     finally:
         conn.close()
-
 
 def fetch_one(query, params=None):
-    """Fetch a single row as a dict. Returns None if no row found."""
+    is_select = query.strip().upper().startswith("SELECT")
+    if is_select:
+        cache_key = _make_cache_key(query, params)
+        if cache_key in query_cache:
+            return query_cache[cache_key]
+
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
             cursor.execute(query, params)
-            return cursor.fetchone()
+            result = cursor.fetchone()
+            
+            if is_select:
+                query_cache[cache_key] = result
+                
+            return result
     finally:
         conn.close()
 
-
 def fetch_all(query, params=None):
-    """Fetch all rows as a list of dicts."""
+    is_select = query.strip().upper().startswith("SELECT")
+    if is_select:
+        cache_key = _make_cache_key(query, params)
+        if cache_key in query_cache:
+            return query_cache[cache_key]
+
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
             cursor.execute(query, params)
-            return cursor.fetchall()
+            result = cursor.fetchall()
+            
+            if is_select:
+                query_cache[cache_key] = result
+                
+            return result
     finally:
         conn.close()

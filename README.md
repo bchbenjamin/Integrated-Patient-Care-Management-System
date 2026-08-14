@@ -1,7 +1,7 @@
 <div align="center">
   <img src="https://img.icons8.com/color/96/000000/heart-health.png" alt="Ease Health Logo" width="80" height="80">
 
-  # 🏥 Ease Health: Integrated Patient Care Management System (IPCMS)
+  # 🏥 Ease Health: Patient Care Management System for Healthcare Services (PCMSHS)
   
   **A next-generation, AI-powered healthcare management platform built for modern clinics.**
 
@@ -17,7 +17,7 @@
 
 ## 🌟 Overview
 
-The **Integrated Patient Care Management System (IPCMS)**, branded as **Ease Health**, is a full-stack, AI-integrated web application designed to streamline clinic operations. It provides dedicated portals for **Patients, Doctors, and Administrators**, ensuring a seamless healthcare experience from booking to consultation.
+The **Patient Care Management System for Healthcare Services (PCMSHS)**, branded as **Ease Health**, is a full-stack, AI-integrated web application designed to streamline clinic operations. It provides dedicated portals for **Patients, Doctors, and Administrators**, ensuring a seamless healthcare experience from booking to consultation.
 
 Built with a stunning, custom-designed **Bioluminescent UI**, it rejects the sterile look of traditional medical software in favor of a modern, engaging, and premium aesthetic.
 
@@ -57,7 +57,16 @@ Built with a stunning, custom-designed **Bioluminescent UI**, it rejects the ste
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Milestones
+
+- **Milestone 2 (Completed):** Entire application successfully migrated from Streamlit to FastAPI + Jinja2 + Vanilla JS/CSS.
+- **Milestone 3 (Completed):** Integrated RxNorm for medicine search proxy, WeasyPrint PDF generation for prescriptions, and standalone `/prescribe` GUI.
+- **Milestone 3.5 (Completed):** Unification of Jinja2 components, CSS variables centralization, PWA manifest addition, and motion/animation integration.
+- **Milestone 4 (Completed):** Gemini-style synced Voice Mode, Outlook SMTP Email & 2FA system, Tesseract OCR for document parsing, complete migration from emojis to vector SVGs, and rebranding to Patient Care Management System for Healthcare Services.
+
+---
+
+## 🛠️ Getting Started
 
 ### 1. Prerequisites
 Ensure you have Python 3.11+ installed.

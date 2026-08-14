@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% import 'components/tabs.html' as tabs %}
+{% import 'components/chat.html' as chat %}
+
+{% block title %}Pharmacy - Ease Health{% endblock %}
+
+{% block content %}
+<div class="eyebrow">PHARMACY</div>
+<h2>Medicines & Supplies</h2>
+
+<div style="margin-bottom: 24px;">
+    {{ tabs.tab_nav([
+        {'id': 'otc', 'label': 'Over the Counter'},
+        {'id': 'prescribed', 'label': 'Your Prescriptions'}
+    ], active=0) }}
+</div>
+
+<div class="tab-content-wrapper">
+    {% call tabs.tab_panel('otc', active=true) %}
+        {% if otc_medicines %}
+        <div class="pharmacy-grid">
+            {% for med in otc_medicines %}
+            <div class="pharmacy-card card-animate" style="animation-delay: {{ loop.index0 * 0.05 }}s;">
+                <div class="pharmacy-card-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 20.5A7 7 0 0 1 3.5 13.5l7-7a7 7 0 0 1 9.9 9.9l-7 7a7 7 0 0 1-2.9 1.1Z"/><path d="m8.5 8.5 7 7"/></svg></div>
+                <h3 class="pharmacy-card-name">{{ med.medicine_name }}</h3>
+                <p class="pharmacy-card-desc">{{ med.description }}</p>
+                <p class="pharmacy-card-meta">{{ med.dosage_form }} · {{ med.strength }}</p>
+                {% if med.generic_name and med.generic_name != med.medicine_name %}
+                <p class="pharmacy-card-meta">Generic: {{ med.generic_name }}</p>
+                {% endif %}
+                <div class="pharmacy-card-footer">
+                    <span class="pharmacy-price">${{ "%.2f"|format(med.price) }}</span>
+                    <span class="badge {% if med.quantity < 10 %}badge-warning{% else %}badge-success{% endif %}">
+                        {% if med.quantity < 10 %}Low Stock{% else %}In Stock{% endif %}
+                    </span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="card" style="text-align:center; padding:48px;">
+            <p style="margin-bottom:8px;"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--forest-ink)" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg></p>
+            <p style="color:var(--charcoal); opacity:0.6;">No OTC medicines currently available.</p>
+        </div>
+        {% endif %}
+    {% endcall %}
+
+    {% call tabs.tab_panel('prescribed', active=false) %}
+        {% if prescribed_medicines %}
+        <div class="pharmacy-grid">
+            {% for med in prescribed_medicines %}
+            <div class="pharmacy-card card-animate" style="animation-delay: {{ loop.index0 * 0.05 }}s;">
+                <div class="pharmacy-card-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg></div>
+                <h3 class="pharmacy-card-name">{{ med.medicine_name }}</h3>
+                <p class="pharmacy-card-desc">{{ med.description }}</p>
+                <p class="pharmacy-card-meta">{{ med.dosage_form }} · {{ med.strength }}</p>
+                <hr style="border:none; border-top:1px solid var(--border-mist); margin:8px 0;">
+                <p class="pharmacy-card-meta">
+                    <strong>Dr. {{ med.doctor_name }}</strong><br>
+                    {{ med.prescribed_dosage }} — {{ med.prescribed_frequency }}
+                    {% if med.duration_days %} ({{ med.duration_days }} days){% endif %}
+                </p>
+                <div class="pharmacy-card-footer">
+                    <span class="pharmacy-price">${{ "%.2f"|format(med.price) }}</span>
+                    <span class="badge {% if med.quantity < 10 %}badge-warning{% else %}badge-success{% endif %}">
+                        {% if med.quantity < 10 %}Low Stock{% else %}In Stock{% endif %}
+                    </span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="card" style="text-align:center; padding:48px;">
+            <p style="margin-bottom:8px;"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--forest-ink)" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg></p>
+            <p style="color:var(--charcoal); opacity:0.6;">No prescribed medicines are currently in stock.</p>
+        </div>
+        {% endif %}
+    {% endcall %}
+</div>
+
+{{ chat.ai_chat(user.full_name) }}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function switchTab(tabId, element) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        if (element) {
+            element.classList.add('active');
+        } else {
+            const targetTab = document.querySelector(`.tab[data-target="${tabId}"]`);
+            if(targetTab) targetTab.classList.add('active');
+        }
+
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        const targetContent = document.getElementById(tabId);
+        if (targetContent) {
+            targetContent.classList.add('active');
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof EaseChat !== 'undefined') {
+            EaseChat.init({ endpoint: '/chat', role: 'patient' });
+        }
+    });
+</script>
+{% endblock %}

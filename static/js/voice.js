@@ -94,7 +94,7 @@ const EaseVoice = (function() {
         return chunks;
     }
 
-    function doSpeak(text) {
+    function doSpeak(text, onProgress) {
         return new Promise((resolve) => {
             const utterance = new SpeechSynthesisUtterance(text);
             if (voices[selectedVoiceIndex]) {
@@ -103,6 +103,14 @@ const EaseVoice = (function() {
             utterance.rate = 0.95;
             utterance.pitch = 1.05;
 
+            if (onProgress) {
+                utterance.onboundary = function(event) {
+                    if (event.name === 'word') {
+                        onProgress(text.substring(0, event.charIndex + event.charLength));
+                    }
+                };
+            }
+
             utterance.onend = resolve;
             utterance.onerror = resolve;
 
@@ -110,39 +118,56 @@ const EaseVoice = (function() {
         });
     }
 
-    async function processSpeech(text) {
+    async function processSpeech(text, callbacks = {}) {
         const chunks = chunkText(text);
         const statusEl = document.getElementById('voice-status');
         if (statusEl) {
             statusEl.textContent = 'Speaking...';
             statusEl.classList.add('speaking');
         }
+        if (callbacks.onStart) callbacks.onStart();
         
+        let spokenSoFar = '';
         for (const chunk of chunks) {
             if (!('speechSynthesis' in window)) break;
             if (window.speechSynthesis.paused) {
                 window.speechSynthesis.resume();
             }
             
-            await doSpeak(chunk);
+            await doSpeak(chunk, (progressText) => {
+                if (callbacks.onProgress) {
+                    callbacks.onProgress(spokenSoFar + progressText);
+                }
+            });
+            spokenSoFar += chunk + ' ';
+            if (callbacks.onProgress) {
+                callbacks.onProgress(spokenSoFar);
+            }
         }
         
         if (statusEl) {
             statusEl.textContent = '';
             statusEl.classList.remove('speaking');
         }
+        if (callbacks.onEnd) callbacks.onEnd();
     }
 
-    function speak(text) {
-        if (!ttsEnabled || !('speechSynthesis' in window)) return;
+    function speak(text, callbacks = {}) {
+        if (!ttsEnabled || !('speechSynthesis' in window)) {
+            if (callbacks.onEnd) callbacks.onEnd();
+            return;
+        }
         // Strip markdown
         const cleanText = text.replace(/\*\*(.*?)\*\*/g, '$1').replace(/<[^>]*>/g, '');
-        if (!cleanText.trim()) return;
+        if (!cleanText.trim()) {
+            if (callbacks.onEnd) callbacks.onEnd();
+            return;
+        }
 
         // Cancel any ongoing speech
         window.speechSynthesis.cancel();
         
-        processSpeech(cleanText);
+        processSpeech(cleanText, callbacks);
     }
 
     function speakDirect(text) {
